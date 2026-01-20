@@ -4,6 +4,7 @@ src/balanceops/__init__.py
 src/balanceops.egg-info/PKG-INFO
 src/balanceops.egg-info/SOURCES.txt
 src/balanceops.egg-info/dependency_links.txt
+src/balanceops.egg-info/requires.txt
 src/balanceops.egg-info/top_level.txt
 src/balanceops/common/__init__.py
 src/balanceops/common/config.py
