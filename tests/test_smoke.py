@@ -15,3 +15,8 @@ def test_smoke(tmp_path: Path):
     demo_main()
 
     assert db.exists()
+
+def test_imports():
+    import balanceops
+    import pandas
+    import streamlit

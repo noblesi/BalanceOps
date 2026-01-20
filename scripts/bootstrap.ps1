@@ -12,15 +12,12 @@ Set-Location $RepoRoot
 $VenvPython = Join-Path $RepoRoot ".venv\Scripts\python.exe"
 if (Test-Path $VenvPython) {
   Write-Host "[bootstrap] using venv python: $VenvPython"
-  $PythonMode = "venv"
 } elseif (Get-Command py -ErrorAction SilentlyContinue) {
   Write-Host "[bootstrap] creating venv with py -$PythonVersion"
-  $PythonMode = "py"
   & py -$PythonVersion -m venv .venv
   $VenvPython = Join-Path $RepoRoot ".venv\Scripts\python.exe"
 } else {
   Write-Host "[bootstrap] creating venv with system python"
-  $PythonMode = "python"
   python -m venv .venv
   $VenvPython = Join-Path $RepoRoot ".venv\Scripts\python.exe"
 }
@@ -32,13 +29,8 @@ if (-not (Test-Path $VenvPython)) {
 # pip 업데이트
 & $VenvPython -m pip install -U pip setuptools wheel
 
-# 프로젝트 설치 (editable)
-& $VenvPython -m pip install -e .
-
-# (선택) 개발 의존성이 있으면 설치
-if (Test-Path "requirements-dev.txt") {
-  & $VenvPython -m pip install -r requirements-dev.txt
-}
+# 프로젝트 설치 (editable) + dev extras
+& $VenvPython -m pip install -e ".[dev]"
 
 Write-Host ""
 Write-Host "[bootstrap] done."
