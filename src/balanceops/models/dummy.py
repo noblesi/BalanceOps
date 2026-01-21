@@ -10,7 +10,7 @@ class DummyBalanceModel:
     w: np.ndarray
     b: float
 
-    def predict_proba(self, x: np.ndarray) -> np.ndarray:
+    def predict_proba(self, x):
         x = np.asarray(x, dtype=float)
         if x.ndim == 1:
             x = x.reshape(1, -1)
