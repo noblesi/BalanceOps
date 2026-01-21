@@ -41,16 +41,19 @@ def model_info() -> dict[str, Any]:
 
 
 @app.post("/predict")
-def predict(req: PredictRequest) -> dict[str, Any]:
-    model = _get_model()
-    if model is None:
-        _get_model.cache_clear()
+def predict(req: PredictRequest):
+    try:
         model = _get_model()
+    except Exception as e:
+        # 캐시된 깨진 상태를 날리고, 사용자에게 명확히 안내
+        _get_model.cache_clear()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to load current model. Re-promote a valid model. ({type(e).__name__}: {e})",
+        )
+
     if model is None:
         raise HTTPException(status_code=404, detail="No current model promoted yet.")
-    x = np.array(req.features, dtype=float).reshape(1, -1)
-    if hasattr(model, "predict_proba"):
-        p = float(model.predict_proba(x)[0, 1])
-        return {"p_win": p}
-    y = model.predict(x)
-    return {"pred": int(y[0])}
+
+    proba = model.predict_proba(req.features)[0][1]
+    return {"p_win": float(proba)}
