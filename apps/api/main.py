@@ -44,6 +44,9 @@ def model_info() -> dict[str, Any]:
 def predict(req: PredictRequest) -> dict[str, Any]:
     model = _get_model()
     if model is None:
+        _get_model.cache_clear()
+        model = _get_model()
+    if model is None:
         raise HTTPException(status_code=404, detail="No current model promoted yet.")
     x = np.array(req.features, dtype=float).reshape(1, -1)
     if hasattr(model, "predict_proba"):
