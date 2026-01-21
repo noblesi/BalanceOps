@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 import joblib
 
 from balanceops.common.config import get_settings
@@ -27,8 +28,11 @@ def get_current_model_info(name: str = "balance_model") -> dict:
     }
 
 
-def load_current_model(name: str = "balance_model"):
-    info = get_current_model_info(name=name)
-    if not info.get("exists"):
-        return None
-    return joblib.load(info["path"])
+def load_current_model():
+    info = get_current_model_info()
+    path = Path(info["path"])
+
+    if not path.exists():
+        return None  # ✅ 파일 없으면 None
+
+    return joblib.load(str(path))
