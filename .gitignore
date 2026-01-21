@@ -10,3 +10,4 @@ artifacts/
 *.joblib
 
 .env
+.pytest_cache/

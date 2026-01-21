@@ -26,4 +26,4 @@ jobs:
 
       - name: Pytest (if any)
         run: |
-          pytest -q || true
+          pytest -q

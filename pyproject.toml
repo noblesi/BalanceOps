@@ -11,6 +11,11 @@ dependencies = [
   "streamlit>=1.30",
   "pandas>=2.2",
   "numpy>=2.0",
+  "fastapi",
+  "uvicorn[standard]",
+  "pydantic",
+  "joblib",
+  "python-dotenv",
 ]
 
 [project.optional-dependencies]
