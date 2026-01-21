@@ -33,6 +33,7 @@ def write_run_manifest(
     metrics: Optional[Dict[str, Any]] = None,
     write_latest: bool = True,
 ) -> Path:
+    db_path = db_path or (Path("data") / "balanceops.db")
     if not isinstance(db_path, Path):
         db_path = Path(db_path)
 
