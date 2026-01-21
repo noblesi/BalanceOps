@@ -16,30 +16,8 @@ from balanceops.registry.promote import promote_run
 from balanceops.tracking.log_run import create_run, log_artifact, log_metric
 from balanceops.tracking.manifest import write_run_manifest
 
+from balanceops.models.dummy import DummyBalanceModel
 
-@dataclass
-class DummyBalanceModel:
-    seed: int
-    w: np.ndarray
-    b: float
-
-    def predict_proba(self, x: np.ndarray) -> np.ndarray:
-        x = np.asarray(x, dtype=float)
-        if x.ndim == 1:
-            x = x.reshape(1, -1)
-
-        # 입력 feature 길이가 달라도 안전하게 동작
-        n_in = x.shape[1]
-        w = self.w
-        if n_in < w.size:
-            w = w[:n_in]
-        elif n_in > w.size:
-            w = np.pad(w, (0, n_in - w.size))
-
-        z = x @ w + self.b
-        p = 1.0 / (1.0 + np.exp(-z))
-        p = np.clip(p, 1e-6, 1.0 - 1e-6)
-        return np.stack([1.0 - p, p], axis=1)
 
 
 def _metrics_from_synth(model: DummyBalanceModel, n_samples: int, n_features: int, seed: int) -> dict:
