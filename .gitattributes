@@ -1,0 +1,23 @@
+# Normalize line endings across platforms
+# - Store all text files as LF in the repo
+# - Let Git handle working-tree conversion as needed
+
+* text=auto eol=lf
+
+# Explicitly mark common binaries (avoid accidental EOL conversion)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.zip binary
+*.7z binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.joblib binary
+*.pkl binary
+*.onnx binary
+*.db binary
+*.sqlite binary
