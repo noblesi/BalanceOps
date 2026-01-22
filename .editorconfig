@@ -1,0 +1,41 @@
+root = true
+
+# 기본 설정
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Markdown: 줄끝 공백을 의미로 쓰는 경우가 있어 유지
+[*.md]
+trim_trailing_whitespace = false
+
+# Python
+[*.py]
+indent_size = 4
+
+# JSON/YAML
+[*.json]
+indent_size = 2
+[*.yml]
+indent_size = 2
+[*.yaml]
+indent_size = 2
+
+# PowerShell
+[*.ps1]
+indent_size = 2
+
+# 배치/쉘 스크립트
+[*.bat]
+end_of_line = crlf
+[*.sh]
+end_of_line = lf
+
+# 바이너리/이미지류는 에디터 규칙 적용 불필요(명시용)
+[*.{png,jpg,jpeg,gif,pdf,zip,7z,exe,dll,so,dylib,joblib,pkl,onnx,db,sqlite}]
+trim_trailing_whitespace = false
+insert_final_newline = false
