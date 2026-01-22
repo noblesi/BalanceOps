@@ -9,8 +9,10 @@ src/balanceops.egg-info/top_level.txt
 src/balanceops/common/__init__.py
 src/balanceops/common/config.py
 src/balanceops/common/gitinfo.py
+src/balanceops/models/dummy.py
 src/balanceops/pipeline/__init__.py
 src/balanceops/pipeline/demo_run.py
+src/balanceops/pipeline/train_dummy.py
 src/balanceops/registry/__init__.py
 src/balanceops/registry/current.py
 src/balanceops/registry/policy.py
@@ -19,4 +21,5 @@ src/balanceops/tracking/__init__.py
 src/balanceops/tracking/db.py
 src/balanceops/tracking/init_db.py
 src/balanceops/tracking/log_run.py
+src/balanceops/tracking/manifest.py
 tests/test_smoke.py

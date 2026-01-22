@@ -30,7 +30,17 @@ def get_current_model_info(name: str = "balance_model") -> dict:
 
 def load_current_model():
     info = get_current_model_info()
-    path = Path(info["path"])
+    
+    # (A) DB에 current row 자체가 없을 때
+    if not info.get("exists", False):
+        return None
+    
+    # (B) DB에는 있는데 path가 비정상(방어)
+    path_str = info.get("path")
+    if not path_str:
+        return None
+    
+    path = Path(path_str)
 
     if not path.exists():
         return None  # ✅ 파일 없으면 None
