@@ -27,5 +27,8 @@
 # 4) API 서버
 .\scripts\serve.ps1
 
+# (선택) HTTP 스모크 체크 (/health + /predict)
+.\scripts\smoke_http.ps1
+
 # (선택) 대시보드
 .\scripts\dashboard.ps1
