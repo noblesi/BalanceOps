@@ -30,5 +30,13 @@
 # (선택) HTTP 스모크 체크 (/health + /predict)
 .\scripts\smoke_http.ps1
 
+# (선택) 스모크 옵션 예시
+# - /predict 404도 실패로 처리(=CI/배포 전 체크용)
+# .\scripts\smoke_http.ps1 -FailOnPredict404
+# - health만 확인하고 싶다면
+# .\scripts\smoke_http.ps1 -SkipPredict
+# - 일시적인 네트워크/서버 스타트업 대응: 재시도
+# .\scripts\smoke_http.ps1 -Retries 2 -RetryDelaySec 1
+
 # (선택) 대시보드
 .\scripts\dashboard.ps1
