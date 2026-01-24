@@ -7,6 +7,13 @@ on:
 jobs:
   smoke:
     runs-on: ubuntu-latest
+
+    env:
+      BALANCEOPS_DB: ${{ github.workspace }}/.ci/balanceops.db
+      BALANCEOPS_ARTIFACTS: ${{ github.workspace }}/.ci/artifacts
+      BALANCEOPS_CURRENT_MODEL: ${{ github.workspace }}/.ci/artifacts/models/current.joblib
+      PYTHONUNBUFFERED: "1"
+
     steps:
       - uses: actions/checkout@v4
 
@@ -24,6 +31,28 @@ jobs:
         run: |
           python -c "import balanceops; print('balanceops ok')"
 
-      - name: Pytest (if any)
+      - name: Prepare DB + promote dummy current model
+        run: |
+          python -m balanceops.tracking.init_db
+          python -m balanceops.pipeline.train_dummy
+
+      - name: Start API server (background)
+        run: |
+          python -m uvicorn apps.api.main:app --host 127.0.0.1 --port 8000 --log-level info &
+          echo $! > uvicorn.pid
+
+      - name: HTTP smoke (/health, /predict)
+        shell: pwsh
+        run: |
+          ./scripts/smoke_http.ps1 -Port 8000 -Retries 10 -RetryDelaySec 0.5 -FailOnPredict404
+
+      - name: Stop API server
+        if: always()
+        run: |
+          if [ -f uvicorn.pid ]; then
+            kill $(cat uvicorn.pid) || true
+          fi
+
+      - name: Pytest
         run: |
           pytest -q
