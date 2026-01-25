@@ -21,6 +21,7 @@ def main() -> None:
         run_id=run_id,
         kind="demo",
         status="success",
+        artifacts_root=Path(s.artifacts_dir),
         db_path=Path(s.db_path),
         metrics={"acc": 0.90, "bal_acc": 0.88},
     )

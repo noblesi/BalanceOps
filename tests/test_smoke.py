@@ -1,3 +1,5 @@
+import json
+import re
 import os
 from pathlib import Path
 
@@ -14,6 +16,12 @@ def test_smoke(tmp_path: Path):
 
     init_db(str(db))
     demo_main()
+
+    latest = tmp_path / "artifacts" / "runs" / "_latest.json"
+    assert latest.exists()
+
+    info = json.loads(latest.read_text(encoding="utf-8"))
+    assert re.match(r"^\d{8}_\d{6}_demo_[0-9A-Za-z]{8}$", info["run_dir_name"])
 
     assert db.exists()
 

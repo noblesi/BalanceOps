@@ -68,6 +68,7 @@ def train_dummy_run(*, seed: int = 42, n_samples: int = 300, n_features: int = 8
         run_id=run_id,
         kind="train_dummy",
         status="success",
+        artifacts_root=Path(s.artifacts_dir),
         db_path=Path(s.db_path),
         metrics=metrics,
     )
