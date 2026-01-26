@@ -10,7 +10,7 @@ import streamlit as st
 from balanceops.common.config import get_settings
 from balanceops.registry.current import get_current_model_info
 from balanceops.tracking.init_db import init_db
-from balanceops.tracking.read import get_run_detail, list_runs_summary
+from balanceops.tracking.read import get_run_detail, list_runs_summary, get_latest_run_id
 
 
 st.set_page_config(page_title="BalanceOps Dashboard", layout="wide")
@@ -84,72 +84,22 @@ run_ids = [r["run_id"] for r in items]
 if "selected_run_id" not in st.session_state:
     st.session_state["selected_run_id"] = run_ids[0]
 
-selected = st.selectbox("Select run", options=run_ids, key="selected_run_id")
+ctrl1, ctrl2, ctrl3 = st.columns([3, 1, 1])
 
-detail = get_run_detail(s.db_path, run_id=selected, artifacts_root=s.artifacts_dir)
+with ctrl1:
+    selected = st.selectbox("Select run", options=run_ids, key="selected_run_id")
 
-st.subheader("Run Detail")
+with ctrl2:
+    if st.button("Latest", use_container_width=True):
+        latest_id = get_latest_run_id(artifacts_root=s.artifacts_dir, db_path=s.db_path)
+        if latest_id is None:
+            st.warning("No latest run found.")
+        else:
+            st.session_state["selected_run_id"] = latest_id
+            st.rerun()
 
-if detail is None:
-    st.error(f"Run not found: {selected}")
-    st.stop()
+with ctrl3:
+    if st.button("Refresh", use_container_width=True):
+        st.rerun()
 
-params = detail.get("params") if isinstance(detail.get("params"), dict) else {}
-kind = params.get("kind") or "-"
-
-git = detail.get("git") or {}
-commit = (git.get("commit") or "")[:8] or "-"
-branch = git.get("branch") or "-"
-dirty = "dirty" if git.get("dirty") else "clean"
-
-c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
-c1.metric("Created", detail.get("created_at") or "-")
-c2.metric("Kind", kind)
-c3.metric("Git", f"{commit} / {branch}")
-c4.metric("Worktree", dirty)
-
-tab_metrics, tab_params, tab_artifacts, tab_manifest = st.tabs(["Metrics", "Params", "Artifacts", "Manifest"])
-
-with tab_metrics:
-    m = detail.get("metrics") or {}
-    if not m:
-        st.info("No metrics for this run.")
-    else:
-        mdf = pd.DataFrame([{"key": k, "value": v} for k, v in m.items()]).sort_values("key")
-        st.dataframe(mdf, use_container_width=True, hide_index=True)
-
-with tab_params:
-    if not params:
-        st.info("No params_json saved for this run.")
-    else:
-        st.json(params)
-
-with tab_artifacts:
-    artifacts = detail.get("artifacts") or []
-    if not artifacts:
-        st.info("No artifacts recorded for this run.")
-    else:
-        adf = pd.DataFrame(artifacts)
-        st.dataframe(adf, use_container_width=True, hide_index=True)
-
-with tab_manifest:
-    manifest_ptr = detail.get("manifest")
-    if not isinstance(manifest_ptr, dict):
-        st.info("No manifest pointer found. (artifacts/runs/_by_id/<run_id>.json)")
-    else:
-        st.json(manifest_ptr)
-
-        mp = manifest_ptr.get("manifest_path")
-        if isinstance(mp, str) and mp:
-            p = Path(mp)
-            st.caption("manifest_path")
-            st.code(mp)
-
-            try:
-                if p.exists():
-                    st.caption("manifest.json (loaded)")
-                    st.json(json.loads(p.read_text(encoding="utf-8")))
-                else:
-                    st.caption("manifest.json not found on filesystem (path mismatch).")
-            except Exception as e:
-                st.warning(f"Failed to read manifest.json: {e}")
+detail = get_run_detail(s.db_path, run_id=st.session_state["selected_run_id"], artifacts_root=s.artifacts_dir)
