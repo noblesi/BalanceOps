@@ -4,7 +4,7 @@ import uuid
 from functools import lru_cache
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from balanceops.common.config import get_settings
 from balanceops.registry.current import get_current_model_info, load_current_model
 from balanceops.tracking.init_db import init_db
+from balanceops.tracking.read import get_latest_run_id, get_run_detail, list_runs_summary
 
 
 app = FastAPI(title="BalanceOps API")
@@ -94,6 +95,64 @@ def health() -> dict[str, str]:
 @app.get("/model")
 def model_info() -> dict[str, Any]:
     return get_current_model_info()
+
+@app.get("/runs")
+def list_runs(
+    limit: int = Query(20, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    include_metrics: bool = True,
+) -> dict[str, Any]:
+    s = get_settings()
+    items = list_runs_summary(
+        s.db_path,
+        limit=limit,
+        offset=offset,
+        include_metrics=include_metrics,
+    )
+    return {"items": items, "limit": limit, "offset": offset, "count": len(items)}
+
+
+@app.get("/runs/latest")
+def latest_run() -> dict[str, Any]:
+    s = get_settings()
+    run_id = get_latest_run_id(artifacts_root=s.artifacts_dir, db_path=s.db_path)
+    if run_id is None:
+        raise HTTPException(
+            status_code=404,
+            detail=_err(
+                "RUN_NOT_FOUND",
+                "No runs found.",
+                hint="Run scripts/run_once.ps1 (or: python -m balanceops.pipeline.demo_run) to create one.",
+            ),
+        )
+
+    detail = get_run_detail(s.db_path, run_id=run_id, artifacts_root=s.artifacts_dir)
+    if detail is None:
+        raise HTTPException(
+            status_code=404,
+            detail=_err(
+                "RUN_NOT_FOUND",
+                "Run not found.",
+                details={"run_id": run_id},
+            ),
+        )
+    return detail
+
+
+@app.get("/runs/{run_id}")
+def get_run(run_id: str) -> dict[str, Any]:
+    s = get_settings()
+    detail = get_run_detail(s.db_path, run_id=run_id, artifacts_root=s.artifacts_dir)
+    if detail is None:
+        raise HTTPException(
+            status_code=404,
+            detail=_err(
+                "RUN_NOT_FOUND",
+                "Run not found.",
+                details={"run_id": run_id},
+            ),
+        )
+    return detail
 
 
 @app.post("/predict")
