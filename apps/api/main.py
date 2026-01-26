@@ -4,6 +4,8 @@ import uuid
 from functools import lru_cache
 from typing import Any
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException, Request, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -15,7 +17,15 @@ from balanceops.tracking.init_db import init_db
 from balanceops.tracking.read import get_latest_run_id, get_run_detail, list_runs_summary
 
 
-app = FastAPI(title="BalanceOps API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup: 여기에서 기존 on_event("startup") 로 하던 작업 수행
+    s = get_settings()
+    init_db(s.db_path)
+    yield
+    # shutdown: 필요하면 정리 작업(없으면 비워둬도 됨)
+
+app = FastAPI(lifespan=lifespan)
 
 
 class PredictRequest(BaseModel):
@@ -79,12 +89,6 @@ async def _unhandled_exception_handler(request: Request, exc: Exception):
 @lru_cache(maxsize=1)
 def _get_model():
     return load_current_model()
-
-
-@app.on_event("startup")
-def _startup():
-    s = get_settings()
-    init_db(s.db_path)
 
 
 @app.get("/health")
