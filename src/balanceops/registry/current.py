@@ -11,40 +11,40 @@ from balanceops.tracking.db import connect
 def get_current_model_info(name: str = "balance_model") -> dict:
     s = get_settings()
     con = connect(s.db_path)
-    row = con.execute(
-        "SELECT name, stage, run_id, path, created_at, metrics_json " 
+
+    sql = (
+        "SELECT name, stage, run_id, path, created_at, metrics_json "
         "FROM models WHERE name=? AND stage='current'"
-        (name,),
-    ).fetchone()
-    con.close()
+    )
+
+    row = con.execute(sql, (name,)).fetchone()
+
     if row is None:
-        return {"exists": False, "name": name}
+        return {}
+
     return {
-        "exists": True,
-        "name": row["name"],
-        "stage": row["stage"],
-        "run_id": row["run_id"],
-        "path": row["path"],
-        "created_at": row["created_at"],
-        "metrics_json": row["metrics_json"],
+        "name": row[0],
+        "stage": row[1],
+        "run_id": row[2],
+        "path": row[3],
+        "created_at": row[4],
+        "metrics_json": row[5],
     }
 
 
-def load_current_model():
-    info = get_current_model_info()
-
-    # (A) DB에 current row 자체가 없을 때
-    if not info.get("exists", False):
+def load_current_model(name: str = "balance_model"):
+    info = get_current_model_info(name=name)
+    if not info:
         return None
 
-    # (B) DB에는 있는데 path가 비정상(방어)
-    path_str = info.get("path")
-    if not path_str:
+    path = info.get("path")
+    if not path:
         return None
 
-    path = Path(path_str)
+    p = Path(path)
+    if not p.exists():
+        # path가 상대경로로 저장된 경우를 대비(선택)
+        # 여기서 artifacts_root까지 합치고 싶으면 settings를 이용해 확장 가능
+        return None
 
-    if not path.exists():
-        return None  # ✅ 파일 없으면 None
-
-    return joblib.load(str(path))
+    return joblib.load(p)
