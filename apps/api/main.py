@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import uuid
+from contextlib import asynccontextmanager
 from functools import lru_cache
 from typing import Any
 
-from contextlib import asynccontextmanager
-
-from fastapi import FastAPI, HTTPException, Request, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -24,6 +23,7 @@ async def lifespan(app: FastAPI):
     init_db(s.db_path)
     yield
     # shutdown: 필요하면 정리 작업(없으면 비워둬도 됨)
+
 
 app = FastAPI(lifespan=lifespan)
 
@@ -47,7 +47,9 @@ def _err(
     return err
 
 
-def _error_response(request: Request, status_code: int, err: dict[str, Any]) -> JSONResponse:
+def _error_response(
+        request: Request, status_code: int, err: dict[str, Any]
+    ) -> JSONResponse:
     request_id = getattr(request.state, "request_id", None)
     payload: dict[str, Any] = {"ok": False, "error": err}
     if request_id:
@@ -100,6 +102,7 @@ def health() -> dict[str, str]:
 def model_info() -> dict[str, Any]:
     return get_current_model_info()
 
+
 @app.get("/runs")
 def list_runs(
     limit: int = Query(20, ge=1, le=200),
@@ -126,7 +129,11 @@ def latest_run() -> dict[str, Any]:
             detail=_err(
                 "RUN_NOT_FOUND",
                 "No runs found.",
-                hint="Run scripts/run_once.ps1 (or: python -m balanceops.pipeline.demo_run) to create one.",
+                hint=(
+                    "Run scripts/run_once.ps1 "
+                    "(or: python -m balanceops.pipeline.demo_run) "
+                    "to create one."
+                ),
             ),
         )
 
@@ -181,7 +188,12 @@ def predict(req: PredictRequest):
             detail=_err(
                 "NO_CURRENT_MODEL",
                 "No current model promoted yet.",
-                hint="Run scripts/train_dummy.ps1 (or: python -m balanceops.pipeline.train_dummy) to promote one.",
+                hint=(
+                    "Run scripts/train_dummy.ps1 "
+                    "(or: python -m balanceops.pipeline.train_dummy) "
+                    "to promote one."
+
+                )
             ),
         )
 

@@ -22,4 +22,6 @@ src/balanceops/tracking/db.py
 src/balanceops/tracking/init_db.py
 src/balanceops/tracking/log_run.py
 src/balanceops/tracking/manifest.py
+src/balanceops/tracking/read.py
+tests/test_runs_api.py
 tests/test_smoke.py

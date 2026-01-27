@@ -11,7 +11,9 @@ from balanceops.tracking.init_db import init_db
 def _set_env(tmp_path: Path) -> None:
     os.environ["BALANCEOPS_DB"] = str(tmp_path / "balanceops.db")
     os.environ["BALANCEOPS_ARTIFACTS"] = str(tmp_path / "artifacts")
-    os.environ["BALANCEOPS_CURRENT_MODEL"] = str(tmp_path / "artifacts" / "models" / "current.joblib")
+    os.environ["BALANCEOPS_CURRENT_MODEL"] = str(
+        tmp_path / "artifacts" / "models" / "current.joblib"
+    )
 
 
 def test_runs_endpoints_smoke(tmp_path: Path):

@@ -13,7 +13,9 @@ def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def promote_run(run_id: str, model_path: str, metrics: dict | None = None, name: str = "balance_model") -> str:
+def promote_run(
+    run_id: str, model_path: str, metrics: dict | None = None, name: str = "balance_model"
+) -> str:
     s = get_settings()
 
     src = Path(model_path)

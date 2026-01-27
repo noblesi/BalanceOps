@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+
 import joblib
 
 from balanceops.common.config import get_settings
@@ -11,7 +12,8 @@ def get_current_model_info(name: str = "balance_model") -> dict:
     s = get_settings()
     con = connect(s.db_path)
     row = con.execute(
-        "SELECT name, stage, run_id, path, created_at, metrics_json FROM models WHERE name=? AND stage='current'",
+        "SELECT name, stage, run_id, path, created_at, metrics_json " 
+        "FROM models WHERE name=? AND stage='current'"
         (name,),
     ).fetchone()
     con.close()
@@ -30,16 +32,16 @@ def get_current_model_info(name: str = "balance_model") -> dict:
 
 def load_current_model():
     info = get_current_model_info()
-    
+
     # (A) DB에 current row 자체가 없을 때
     if not info.get("exists", False):
         return None
-    
+
     # (B) DB에는 있는데 path가 비정상(방어)
     path_str = info.get("path")
     if not path_str:
         return None
-    
+
     path = Path(path_str)
 
     if not path.exists():

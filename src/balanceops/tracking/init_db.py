@@ -3,7 +3,6 @@ from __future__ import annotations
 from balanceops.common.config import get_settings
 from balanceops.tracking.db import connect
 
-
 DDL = [
     """
     CREATE TABLE IF NOT EXISTS runs (

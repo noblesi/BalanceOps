@@ -155,7 +155,9 @@ def get_run_detail(
     return detail
 
 
-def get_latest_run_id(*, artifacts_root: str | Path | None = None, db_path: str | None = None) -> str | None:
+def get_latest_run_id(
+    *, artifacts_root: str | Path | None = None, db_path: str | None = None
+) -> str | None:
     """가능하면 artifacts/runs/_latest.json을 사용하고, 없으면 DB의 최신 created_at을 사용."""
     if artifacts_root is not None:
         p = _read_latest_pointer(Path(artifacts_root))

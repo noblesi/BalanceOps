@@ -3,24 +3,23 @@ from __future__ import annotations
 import argparse
 import json
 import uuid
-from dataclasses import dataclass
 from pathlib import Path
 
 import joblib
 import numpy as np
 
 from balanceops.common.config import get_settings
+from balanceops.models.dummy import DummyBalanceModel
 from balanceops.registry.current import get_current_model_info
 from balanceops.registry.policy import should_promote
 from balanceops.registry.promote import promote_run
 from balanceops.tracking.log_run import create_run, log_artifact, log_metric
 from balanceops.tracking.manifest import write_run_manifest
 
-from balanceops.models.dummy import DummyBalanceModel
 
-
-
-def _metrics_from_synth(model: DummyBalanceModel, n_samples: int, n_features: int, seed: int) -> dict:
+def _metrics_from_synth(
+    model: DummyBalanceModel, n_samples: int, n_features: int, seed: int
+) -> dict:
     rng = np.random.default_rng(seed)
     x = rng.normal(size=(n_samples, n_features))
     p = model.predict_proba(x)[:, 1]
@@ -41,7 +40,9 @@ def _metrics_from_synth(model: DummyBalanceModel, n_samples: int, n_features: in
     return {"acc": float(acc), "bal_acc": float(bal_acc), "recall_1": float(tpr)}
 
 
-def train_dummy_run(*, seed: int = 42, n_samples: int = 300, n_features: int = 8, auto_promote: bool = True) -> dict:
+def train_dummy_run(
+    *, seed: int = 42, n_samples: int = 300, n_features: int = 8, auto_promote: bool = True
+) -> dict:
     s = get_settings()
     run_id = str(uuid.uuid4())
 

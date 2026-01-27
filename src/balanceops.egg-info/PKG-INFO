@@ -7,6 +7,7 @@ Requires-Dist: streamlit>=1.30
 Requires-Dist: pandas>=2.2
 Requires-Dist: numpy>=2.0
 Requires-Dist: fastapi
+Requires-Dist: httpx
 Requires-Dist: uvicorn[standard]
 Requires-Dist: pydantic
 Requires-Dist: joblib
