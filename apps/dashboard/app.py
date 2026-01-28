@@ -161,9 +161,7 @@ with ctrl3:
         st.rerun()
 
 detail = get_run_detail(
-    s.db_path, 
-    run_id=st.session_state["selected_run_id"], 
-    artifacts_root=s.artifacts_dir
+    s.db_path, run_id=st.session_state["selected_run_id"], artifacts_root=s.artifacts_dir
 )
 
 st.subheader("Run Detail")

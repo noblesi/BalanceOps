@@ -79,7 +79,11 @@ def train_dummy_run(
     if auto_promote:
         cur = get_current_model_info()
         cur_metrics = None
-        if cur.get("exists"):
+
+        # BUGFIX: get_current_model_info()는 current가 없으면 {}를 반환한다.
+        # 기존 cur.get("exists")는 항상 False -> current를 읽지 못하고
+        # 'no current model yet'로 오판 가능.
+        if cur:
             try:
                 cur_metrics = json.loads(cur.get("metrics_json") or "{}")
             except Exception:

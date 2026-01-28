@@ -47,9 +47,7 @@ def _err(
     return err
 
 
-def _error_response(
-        request: Request, status_code: int, err: dict[str, Any]
-    ) -> JSONResponse:
+def _error_response(request: Request, status_code: int, err: dict[str, Any]) -> JSONResponse:
     request_id = getattr(request.state, "request_id", None)
     payload: dict[str, Any] = {"ok": False, "error": err}
     if request_id:
@@ -192,8 +190,7 @@ def predict(req: PredictRequest):
                     "Run scripts/train_dummy.ps1 "
                     "(or: python -m balanceops.pipeline.train_dummy) "
                     "to promote one."
-
-                )
+                ),
             ),
         )
 
