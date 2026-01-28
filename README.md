@@ -40,3 +40,80 @@
 
 # (선택) 대시보드
 .\scripts\dashboard.ps1
+
+```
+---
+
+## Artifacts 구조
+
+BalanceOps는 **DB(SQLite)** 에 run/metrics/artifacts를 기록하고, 파일 산출물은 `artifacts/` 아래에 남깁니다.
+
+### Runs (`artifacts/runs/`)
+
+각 실행(run)은 아래 구조로 저장됩니다.
+
+```text
+artifacts/
+  runs/
+    <run_dir_name>/
+      manifest.json
+    _latest.json
+    _by_id/
+      <run_id>.json
+```
+
+#### `run_dir_name` 규칙
+
+- 기본 형태: `YYYYMMDD_HHMMSS_<kind>_<shortid>`
+  - 예: `20260126_092143_demo_8e013cbf`
+  - `shortid`는 `run_id(UUID)`의 앞 8자리입니다.
+  - 시간은 **UTC** 기준입니다. (필요하면 KST로 변경 가능)
+- 레거시 실행이 남아있는 경우, 폴더명이 UUID(`artifacts/runs/<run_id>/`)일 수 있습니다.
+  - 이 경우에도 아래 포인터 파일들을 통해 동일하게 접근합니다.
+
+#### `manifest.json`
+
+각 run 폴더에는 `manifest.json`이 생성됩니다.
+
+- run_id / created_at / kind / status
+- metrics 요약(주요 지표 스냅샷)
+- artifacts_dir / db_path
+
+#### 포인터 파일: _latest.json / _by_id/<run_id>.json
+- artifacts/runs/_latest.json
+    - 가장 최근 run을 가리키는 포인터입니다.
+    - API의 /runs/latest가 가능한 경우 이 파일을 우선 사용합니다.
+- artifacts/runs/_by_id/<run_id>.json
+    - run_id(UUID) → manifest_path 매핑입니다.
+    - 폴더명이 UUID가 아니어도 run_id만으로 run 위치를 빠르게 찾기 위해 사용합니다.
+    - API /runs/{run_id}, 대시보드(run detail)에서 이 포인터가 있으면 파일 스캔 없이 manifest를 찾아옵니다.
+
+### Models (`artifacts/models/`)
+
+```text
+artifacts/
+  models/
+    candidates/
+      <run_id>_dummy.joblib
+    current.joblib
+```
+
+- candidates/: 각 run의 후보 모델
+- current.joblib: 현재 서빙에 사용하는 모델(승격 시 갱신)
+
+### 경로 설정(환경변수)
+
+기본 경로는 아래와 같고, 필요 시 환경변수로 변경할 수 있습니다.
+
+- `BALANCEOPS_DB` (기본: `data/balanceops.db`)
+- `BALANCEOPS_ARTIFACTS` (기본: `artifacts/`)
+- `BALANCEOPS_CURRENT_MODEL` (기본: `artifacts/models/current.joblib`)
+
+예시(Windows PowerShell):
+
+```powershell
+$env:BALANCEOPS_DB = "data/balanceops.db"
+$env:BALANCEOPS_ARTIFACTS = "artifacts"
+$env:BALANCEOPS_CURRENT_MODEL = "artifacts/models/current.joblib"
+```
+
