@@ -74,3 +74,41 @@ def test_predict_hot_reload_when_current_model_file_changes(tmp_path: Path):
         assert r2.status_code == 200
         p2 = r2.json()["p_win"]
         assert p2 > 0.99
+
+def test_predict_hot_reload_when_db_current_path_changes(tmp_path: Path):
+    """DB의 current path/run_id 포인터가 바뀌면 서버 재시작 없이 새 모델로 전환되어야 한다."""
+    _set_env(tmp_path)
+    db = tmp_path / "balanceops.db"
+    init_db(str(db))
+
+    models_dir = tmp_path / "artifacts" / "models"
+    models_dir.mkdir(parents=True, exist_ok=True)
+
+    model_a_path = models_dir / "current_a.joblib"
+    model_b_path = models_dir / "current_b.joblib"
+
+    # 1) current를 A로 지정(확률 ~ 0)
+    m_a = DummyBalanceModel(seed=1, w=np.zeros(8, dtype=float), b=-10.0)
+    joblib.dump(m_a, model_a_path)
+    _upsert_current_row(str(db), run_id="rA", path=str(model_a_path))
+
+    import importlib
+    import apps.api.main as api_main
+
+    importlib.reload(api_main)
+
+    with TestClient(api_main.app) as client:
+        r1 = client.post("/predict", json={"features": [0.0] * 8})
+        assert r1.status_code == 200
+        p1 = r1.json()["p_win"]
+        assert p1 < 0.01
+
+        # 2) DB current 포인터를 B로 교체(서버 재시작 없이 반영되어야 함)
+        m_b = DummyBalanceModel(seed=2, w=np.zeros(8, dtype=float), b=10.0)
+        joblib.dump(m_b, model_b_path)
+        _upsert_current_row(str(db), run_id="rB", path=str(model_b_path))
+
+        r2 = client.post("/predict", json={"features": [0.0] * 8})
+        assert r2.status_code == 200
+        p2 = r2.json()["p_win"]
+        assert p2 > 0.99

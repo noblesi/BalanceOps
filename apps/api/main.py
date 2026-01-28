@@ -92,6 +92,7 @@ async def _unhandled_exception_handler(request: Request, exc: Exception):
 
 @dataclass
 class _HotModelCache:
+    db_path: str | None = None
     run_id: str | None = None
     path: str | None = None
     mtime_ns: int | None = None
@@ -104,6 +105,7 @@ _MODEL_CACHE = _HotModelCache()
 
 def _clear_model_cache() -> None:
     with _MODEL_LOCK:
+        _MODEL_CACHE.db_path = None
         _MODEL_CACHE.run_id = None
         _MODEL_CACHE.path = None
         _MODEL_CACHE.mtime_ns = None
@@ -127,7 +129,8 @@ def _resolve_model_path(path: str) -> Path:
 
 
 def _get_model():
-    """현재(current) 모델을 캐시하되, 파일 변경(mtime) 시 자동으로 재로딩."""
+    """현재(current) 모델을 캐시하되, 파일 변경(mtime) 및 DB current 포인터 변경 시 자동으로 재로딩."""
+    db_path = get_settings().db_path
     info = get_current_model_info()
     if not info:
         _clear_model_cache()
@@ -150,23 +153,23 @@ def _get_model():
     with _MODEL_LOCK:
         if (
             _MODEL_CACHE.model is not None
+            and _MODEL_CACHE.db_path == db_path
             and _MODEL_CACHE.path == str(p)
             and _MODEL_CACHE.run_id == run_id
             and _MODEL_CACHE.mtime_ns == mtime_ns
         ):
             return _MODEL_CACHE.model
 
-    # 로딩은 락 밖에서(요청 동시성에서 잠금 시간 최소화)
     model = joblib.load(p)
 
     with _MODEL_LOCK:
+        _MODEL_CACHE.db_path = db_path
         _MODEL_CACHE.model = model
         _MODEL_CACHE.path = str(p)
         _MODEL_CACHE.run_id = run_id
         _MODEL_CACHE.mtime_ns = mtime_ns
 
     return model
-
 
 @app.get("/health")
 def health() -> dict[str, str]:
