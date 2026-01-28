@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import uuid
 from contextlib import asynccontextmanager
-from functools import lru_cache
+from dataclasses import dataclass
+from pathlib import Path
+from threading import Lock
 from typing import Any
+
+import joblib
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
@@ -11,7 +15,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from balanceops.common.config import get_settings
-from balanceops.registry.current import get_current_model_info, load_current_model
+from balanceops.registry.current import get_current_model_info
 from balanceops.tracking.init_db import init_db
 from balanceops.tracking.read import get_latest_run_id, get_run_detail, list_runs_summary
 
@@ -86,9 +90,82 @@ async def _unhandled_exception_handler(request: Request, exc: Exception):
     return _error_response(request, 500, err)
 
 
-@lru_cache(maxsize=1)
+@dataclass
+class _HotModelCache:
+    run_id: str | None = None
+    path: str | None = None
+    mtime_ns: int | None = None
+    model: Any | None = None
+
+
+_MODEL_LOCK = Lock()
+_MODEL_CACHE = _HotModelCache()
+
+
+def _clear_model_cache() -> None:
+    with _MODEL_LOCK:
+        _MODEL_CACHE.run_id = None
+        _MODEL_CACHE.path = None
+        _MODEL_CACHE.mtime_ns = None
+        _MODEL_CACHE.model = None
+
+
+def _resolve_model_path(path: str) -> Path:
+    """DB에 저장된 path를 가능한 한 실제 파일 경로로 해석."""
+    p = Path(path)
+    if p.exists():
+        return p
+
+    # 상대경로인 경우 artifacts_dir 하위도 한 번 더 시도
+    if not p.is_absolute():
+        s = get_settings()
+        p2 = Path(s.artifacts_dir) / p
+        if p2.exists():
+            return p2
+
+    return p
+
+
 def _get_model():
-    return load_current_model()
+    """현재(current) 모델을 캐시하되, 파일 변경(mtime) 시 자동으로 재로딩."""
+    info = get_current_model_info()
+    if not info:
+        _clear_model_cache()
+        return None
+
+    path = info.get("path")
+    if not path:
+        _clear_model_cache()
+        return None
+
+    p = _resolve_model_path(str(path))
+    try:
+        mtime_ns = p.stat().st_mtime_ns
+    except FileNotFoundError:
+        _clear_model_cache()
+        return None
+
+    run_id = info.get("run_id")
+
+    with _MODEL_LOCK:
+        if (
+            _MODEL_CACHE.model is not None
+            and _MODEL_CACHE.path == str(p)
+            and _MODEL_CACHE.run_id == run_id
+            and _MODEL_CACHE.mtime_ns == mtime_ns
+        ):
+            return _MODEL_CACHE.model
+
+    # 로딩은 락 밖에서(요청 동시성에서 잠금 시간 최소화)
+    model = joblib.load(p)
+
+    with _MODEL_LOCK:
+        _MODEL_CACHE.model = model
+        _MODEL_CACHE.path = str(p)
+        _MODEL_CACHE.run_id = run_id
+        _MODEL_CACHE.mtime_ns = mtime_ns
+
+    return model
 
 
 @app.get("/health")
@@ -169,7 +246,7 @@ def predict(req: PredictRequest):
     try:
         model = _get_model()
     except Exception as e:
-        _get_model.cache_clear()
+        _clear_model_cache()
         raise HTTPException(
             status_code=500,
             detail=_err(
