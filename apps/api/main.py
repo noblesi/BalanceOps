@@ -8,7 +8,6 @@ from threading import Lock
 from typing import Any
 
 import joblib
-
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -129,7 +128,8 @@ def _resolve_model_path(path: str) -> Path:
 
 
 def _get_model():
-    """현재(current) 모델을 캐시하되, 파일 변경(mtime) 및 DB current 포인터 변경 시 자동으로 재로딩."""
+    """현재(current) 모델을 캐시하되, 파일 변경(mtime)
+      DB current 포인터 변경 시 자동으로 재로딩."""
     db_path = get_settings().db_path
     info = get_current_model_info()
     if not info:
@@ -170,6 +170,7 @@ def _get_model():
         _MODEL_CACHE.mtime_ns = mtime_ns
 
     return model
+
 
 @app.get("/health")
 def health() -> dict[str, str]:

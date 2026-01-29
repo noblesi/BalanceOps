@@ -53,6 +53,7 @@ def test_predict_hot_reload_when_current_model_file_changes(tmp_path: Path):
 
     # apps.api.main 은 다른 테스트에서 이미 import 되었을 수 있으므로 reload로 캐시 초기화
     import importlib
+
     import apps.api.main as api_main
 
     importlib.reload(api_main)
@@ -75,6 +76,7 @@ def test_predict_hot_reload_when_current_model_file_changes(tmp_path: Path):
         p2 = r2.json()["p_win"]
         assert p2 > 0.99
 
+
 def test_predict_hot_reload_when_db_current_path_changes(tmp_path: Path):
     """DB의 current path/run_id 포인터가 바뀌면 서버 재시작 없이 새 모델로 전환되어야 한다."""
     _set_env(tmp_path)
@@ -93,6 +95,7 @@ def test_predict_hot_reload_when_db_current_path_changes(tmp_path: Path):
     _upsert_current_row(str(db), run_id="rA", path=str(model_a_path))
 
     import importlib
+
     import apps.api.main as api_main
 
     importlib.reload(api_main)
