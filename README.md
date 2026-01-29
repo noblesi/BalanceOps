@@ -42,6 +42,17 @@
 .\scripts\dashboard.ps1
 
 ```
+```
+
+## 주요 API 엔드포인트
+
+- GET `/health` : 헬스 체크
+- GET `/model` : current 모델 정보
+- GET `/runs` : run 목록
+- GET `/runs/latest` : 최신 run 상세
+- POST `/predict` : 예측(p_win) 반환
+
+```
 ---
 
 ## Artifacts 구조
