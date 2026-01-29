@@ -17,22 +17,26 @@ def get_current_model_info(name: str = "balance_model") -> dict:
         "FROM models WHERE name=? AND stage='current'"
     )
 
-    row = con.execute(sql, (name,)).fetchone()
+    try:
+        row = con.execute(sql, (name,)).fetchone()
+        if row is None:
+            return {}
 
-    if row is None:
-        return {}
-
-    return {
-        "name": row[0],
-        "stage": row[1],
-        "run_id": row[2],
-        "path": row[3],
-        "created_at": row[4],
-        "metrics_json": row[5],
-    }
+        return {
+            "name": row["name"],
+            "stage": row["stage"],
+            "run_id": row["run_id"],
+            "path": row["path"],
+            "created_at": row["created_at"],
+            "metrics_json": row["metrics_json"],
+        }
+    finally:
+        con.close()
 
 
 def load_current_model(name: str = "balance_model"):
+    """DB current row의 path를 우선 사용하고, 실패하면 settings.current_model_path로 fallback."""
+    s = get_settings()
     info = get_current_model_info(name=name)
     if not info:
         return None
@@ -41,10 +45,16 @@ def load_current_model(name: str = "balance_model"):
     if not path:
         return None
 
-    p = Path(path)
-    if not p.exists():
-        # path가 상대경로로 저장된 경우를 대비(선택)
-        # 여기서 artifacts_root까지 합치고 싶으면 settings를 이용해 확장 가능
-        return None
+    candidates: list[Path] = []
 
-    return joblib.load(p)
+    p = Path(path)
+    candidates.append(p)
+
+    # DB에 상대경로가 저장되거나, CWD가 달라서 못 찾는 경우를 대비
+    candidates.append(Path(s.current_model_path))
+
+    for cp in candidates:
+        if cp.exists():
+            return joblib.load(cp)
+
+    return None
