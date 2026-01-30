@@ -5,6 +5,7 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import streamlit as st
@@ -69,12 +70,19 @@ def _resolve_path(artifacts_root: str | Path, p: str) -> Path:
     return Path(artifacts_root) / path
 
 
+_KST = ZoneInfo("Asia/Seoul")
+
+
 def _iso_to_local(ts: str | None) -> str:
     if not ts:
         return "-"
     try:
         dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-        return dt.strftime("%Y-%m-%d %H:%M:%S")
+        # created_at은 기본 UTC 저장. UI에서는 KST로 보여주기.
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=ZoneInfo("UTC"))
+        dt = dt.astimezone(_KST)
+        return dt.strftime("%Y-%m-%d %H:%M:%S KST")
     except Exception:
         return ts
 
@@ -105,7 +113,7 @@ for r in items:
     metrics = r.get("metrics") or {}
     rows.append(
         {
-            "created_at": r.get("created_at"),
+            "created_at": _iso_to_local(r.get("created_at")),
             "kind": r.get("kind"),
             "run_id": r.get("run_id"),
             "git_commit": (git.get("commit") or "")[:8],
@@ -137,7 +145,7 @@ def _run_label(run_id: str) -> str:
     r = run_meta.get(run_id)
     if not r:
         return run_id
-    created_at = (r.get("created_at") or "")[:19]
+    created_at = _iso_to_local(r.get("created_at"))
     kind = r.get("kind") or "-"
     return f"{created_at} | {kind} | {run_id[:8]}…"
 
