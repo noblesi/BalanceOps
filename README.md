@@ -55,9 +55,40 @@
 
 ---
 
-## 수동 승격(선택)
+### 예시 (PowerShell)
 
-자동 승격 로직 외에도, 스크립트로 **candidate/current 포인터를 수동으로 변경**할 수 있습니다.
+```powershell
+# health
+Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8000/health"
+
+# current model info
+Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8000/model"
+
+# runs list
+Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8000/runs?limit=10&offset=0&nclude_metrics=true"
+
+# latest run
+Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8000/runs/latest"
+
+# specific run
+Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8000/runs/<run_id>"
+
+# predict
+$body = @{ features = @(0.1,0.2,-0.3,1.0,0.5,0.0,-0.2,0.9) } | ConvertTo-Json -Compress
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/predict" -ContentType "application/son" -Body $body
+```
+
+---
+
+## 모델 승격 흐름(자동/수동)
+
+BalanceOps는 모델 파일을 `artifacts/models/`에 두고, **서빙은 항상 `current.joblib`** 을 사용합니다.
+
+- **candidate 생성**: 학습/실험(run) 결과로 후보 모델이 생성됨
+- **승격(promote)**: 조건(policy)을 만족하거나, 수동으로 candidate → current 승격
+- **서빙(predict)**: FastAPI가 `current.joblib`을 로드해서 `/predict`를 제공
+
+### 수동 승격(스크립트)
 
 ```powershell
 # 최신 run을 current로 승격
@@ -66,6 +97,17 @@
 # 특정 run을 current로 승격
 .\scripts\promote.ps1 -RunId "<run_id>"
 ```
+
+---
+
+## CI 개요
+
+GitHub Actions에서는 보통 아래를 확인합니다.
+
+- **requirements 설치 스모크(Windows + Linux)**: `pip install -r requirements.txt`가 깨지지 않는지 확인
+- **pytest/스모크 테스트**: 최소 단위 테스트 및 엔드포인트 스모크(레포 설정에 따라)
+
+---
 
 ## Artifacts 구조
 
