@@ -40,8 +40,6 @@
 
 # (선택) 대시보드
 .\scripts\dashboard.ps1
-
-```
 ```
 
 ## 주요 API 엔드포인트
@@ -49,11 +47,25 @@
 - GET `/health` : 헬스 체크
 - GET `/model` : current 모델 정보
 - GET `/runs` : run 목록
-- GET `/runs/latest` : 최신 run 상세
-- POST `/predict` : 예측(p_win) 반환
+  - Query:
+    - 'limit' (default: 20)
+    - 'offset' (default: 0)
+    - 'include_metrics' (default: false)
+- GET `/runs/{run_id}` : 특정 run 상세
 
-```
 ---
+
+## 수동 승격(선택)
+
+자동 승격 로직 외에도, 스크립트로 **candidate/current 포인터를 수동으로 변경**할 수 있습니다.
+
+```powershell
+# 최신 run을 current로 승격
+.\scripts\promote.ps1 -Latest
+
+# 특정 run을 current로 승격
+.\scripts\promote.ps1 -RunId "<run_id>"
+```
 
 ## Artifacts 구조
 
