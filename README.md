@@ -65,7 +65,7 @@ Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8000/health"
 Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8000/model"
 
 # runs list
-Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8000/runs?limit=10&offset=0&nclude_metrics=true"
+Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8000/runs?limit=10&offset=0&include_metrics=true"
 
 # latest run
 Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8000/runs/latest"
@@ -75,7 +75,7 @@ Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8000/runs/<run_id>"
 
 # predict
 $body = @{ features = @(0.1,0.2,-0.3,1.0,0.5,0.0,-0.2,0.9) } | ConvertTo-Json -Compress
-Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/predict" -ContentType "application/son" -Body $body
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/predict" -ContentType "application/json" -Body $body
 ```
 
 ---
