@@ -42,6 +42,8 @@
 .\scripts\dashboard.ps1
 ```
 
+- (추천) E2E 원샷 점검: .\scripts\e2e.ps1 (DB 초기화 → 더미 학습/승격 → API 구동 → HTTP 스모크 → 종료)
+
 ## 주요 API 엔드포인트
 
 - GET `/health` : 헬스 체크
