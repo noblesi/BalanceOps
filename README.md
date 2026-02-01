@@ -15,6 +15,12 @@
 ## TL;DR (Windows / PowerShell)
 
 ```powershell
+# 0) - (추천) E2E 원샷 점검: .\scripts\e2e.ps1 (DB 초기화 → 더미 학습/승격 → API 구동 → HTTP 스모크 → 종료)
+.\scripts\e2e.ps1
+# 포트가 겹치면: .\scripts\e2e.ps1 -Port 8010
+
+# ---- 또는 아래를 단계별로 실행 ----
+
 # 1) 가상환경 생성 + editable 설치(개발용 포함)
 .\scripts\bootstrap.ps1
 
@@ -41,8 +47,6 @@
 # (선택) 대시보드
 .\scripts\dashboard.ps1
 ```
-
-- (추천) E2E 원샷 점검: .\scripts\e2e.ps1 (DB 초기화 → 더미 학습/승격 → API 구동 → HTTP 스모크 → 종료)
 
 ## 주요 API 엔드포인트
 
