@@ -61,8 +61,9 @@ def test_load_current_model_falls_back_to_settings_path(monkeypatch, tmp_path: P
     joblib.dump({"ok": True}, p)
 
     # DB path는 존재하지 않는 걸로 반환 → fallback 타야 함
-    monkeypatch.setattr(cur, "get_current_model_info", 
-                        lambda name="balance_model": {"path": "missing.joblib"})
+    monkeypatch.setattr(
+        cur, "get_current_model_info", lambda name="balance_model": {"path": "missing.joblib"}
+    )
 
     m = cur.load_current_model()
     assert m == {"ok": True}

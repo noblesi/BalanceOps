@@ -29,8 +29,9 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--run-id", type=str, default=None, help="target run_id")
     g.add_argument("--latest", action="store_true", help="use latest run_id")
     ap.add_argument("--model-path", type=str, default=None, help="override model path (optional)")
-    ap.add_argument("--name", type=str, default="balance_model", 
-                    help="model name (default: balance_model)")
+    ap.add_argument(
+        "--name", type=str, default="balance_model", help="model name (default: balance_model)"
+    )
     args = ap.parse_args(argv)
 
     s = get_settings()

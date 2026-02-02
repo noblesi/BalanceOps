@@ -74,8 +74,7 @@ def _start_server(*, repo_root: Path, host: str, port: int) -> subprocess.Popen:
     time.sleep(0.2)
     if proc.poll() is not None:
         raise RuntimeError(
-            f"api server exited immediately (exitcode={proc.returncode}). "
-            "Is the port in use?"
+            f"api server exited immediately (exitcode={proc.returncode}). Is the port in use?"
         )
 
     return proc

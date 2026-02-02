@@ -158,8 +158,9 @@ with top4:
     dirty_filter = st.selectbox("Dirty", options=["All", "Clean", "Dirty"], index=0)
 
 with st.spinner("Loading runs..."):
-    items = list_runs_summary(s.db_path, limit=int(limit), offset=0, 
-                              include_metrics=bool(include_metrics))
+    items = list_runs_summary(
+        s.db_path, limit=int(limit), offset=0, include_metrics=bool(include_metrics)
+    )
 
 if not items:
     st.info("No runs yet. Try running: scripts/run_once.ps1")

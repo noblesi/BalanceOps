@@ -129,7 +129,7 @@ def _resolve_model_path(path: str) -> Path:
 
 def _get_model():
     """현재(current) 모델을 캐시하되, 파일 변경(mtime)
-      DB current 포인터 변경 시 자동으로 재로딩."""
+    DB current 포인터 변경 시 자동으로 재로딩."""
     db_path = get_settings().db_path
     info = get_current_model_info()
     if not info:
