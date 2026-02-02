@@ -115,3 +115,34 @@ def test_predict_hot_reload_when_db_current_path_changes(tmp_path: Path):
         assert r2.status_code == 200
         p2 = r2.json()["p_win"]
         assert p2 > 0.99
+
+
+def test_predict_falls_back_to_settings_current_model_path_when_db_path_missing(
+    tmp_path: Path,
+):
+    """DB의 current path가 깨져 있어도 settings.current_model_path가 있으면 서빙이 가능해야 한다."""
+    _set_env(tmp_path)
+    db = tmp_path / "balanceops.db"
+    init_db(str(db))
+
+    model_path = tmp_path / "artifacts" / "models" / "current.joblib"
+    model_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # 실제 파일은 settings.current_model_path에만 존재
+    m = DummyBalanceModel(seed=1, w=np.zeros(8, dtype=float), b=0.0)
+    joblib.dump(m, model_path)
+
+    # DB의 path는 존재하지 않는 경로로 설정
+    _upsert_current_row(str(db), run_id="r1", path="missing.joblib")
+
+    import importlib
+
+    import apps.api.main as api_main
+
+    importlib.reload(api_main)
+
+    with TestClient(api_main.app) as client:
+        r = client.post("/predict", json={"features": [0.0] * 8})
+        assert r.status_code == 200
+        p = r.json()["p_win"]
+        assert 0.49 < p < 0.51

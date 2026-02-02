@@ -19,6 +19,10 @@
 .\scripts\e2e.ps1
 # 포트가 겹치면: .\scripts\e2e.ps1 -Port 8010
 
+# 0-1) (크로스플랫폼) Python E2E 원샷 점검
+python -m balanceops.tools.e2e
+# 포트가 겹치면: python -m balanceops.tools.e2e --port 8010
+
 # ---- 또는 아래를 단계별로 실행 ----
 
 # 1) 가상환경 생성 + editable 설치(개발용 포함)

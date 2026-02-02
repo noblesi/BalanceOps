@@ -145,8 +145,15 @@ def _get_model():
     try:
         mtime_ns = p.stat().st_mtime_ns
     except FileNotFoundError:
-        _clear_model_cache()
-        return None
+        # DB의 path가 다른 OS/환경의 절대경로로 저장되어 있어 깨진 경우,
+        # canonical 경로(settings.current_model_path)를 한 번 더 시도한다.
+        fallback = Path(get_settings().current_model_path)
+        try:
+            mtime_ns = fallback.stat().st_mtime_ns
+            p = fallback
+        except FileNotFoundError:
+            _clear_model_cache()
+            return None
 
     run_id = info.get("run_id")
 

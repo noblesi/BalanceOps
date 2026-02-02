@@ -38,9 +38,17 @@ def _request_json(
 ) -> HttpResult:
     try:
         resp = client.request(method, url, json=body, headers={"Accept": "application/json"})
-    except httpx.HTTPError as e:
-        return HttpResult(ok=False, status_code=None, content=None, obj=None, error=str(e))
-
+    except Exception as e:
+        # NOTE: 일부 환경(특히 Windows/로컬)에서는 connect 단계의 예외가 httpx.HTTPError로
+        # 래핑되지 않고 그대로 올라오는 케이스가 있다.
+        # E2E/스모크에서 "서버 아직 안 뜸" 상황을 재시도로 흡수하기 위해 broad catch.
+        return HttpResult(
+            ok=False,
+            status_code=None,
+            content=None,
+            obj=None,
+            error=f"{type(e).__name__}: {e}",
+        )
     content: str | None = None
     obj: Any | None = None
     try:
