@@ -120,6 +120,13 @@ GitHub Actions에서는 보통 아래를 확인합니다.
 
 ---
 
+### 로컬에서 CI와 동일하게 한 번에 점검하기
+
+- Windows(PowerShell): `.\scripts\ci_check.ps1`  (e2e 스킵: `.\scripts\ci_check.ps1 -SkipE2E`)
+- Cross-platform: `python -m balanceops.tools.ci_check`  (e2e 스킵: `python -m balanceops.tools.ci_check --skip-e2e`)
+
+---
+
 ## Artifacts 구조
 
 BalanceOps는 **DB(SQLite)** 에 run/metrics/artifacts를 기록하고, 파일 산출물은 `artifacts/` 아래에 남깁니다.
