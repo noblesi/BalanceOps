@@ -58,9 +58,10 @@ python -m balanceops.tools.e2e
 - GET `/model` : current 모델 정보
 - GET `/runs` : run 목록
   - Query:
-    - 'limit' (default: 20)
-    - 'offset' (default: 0)
-    - 'include_metrics' (default: false)
+    - `limit` (default: 20)
+    - `offset` (default: 0)
+    - `include_metrics` (default: true)
+- GET `/runs/latest` : 최신 run
 - GET `/runs/{run_id}` : 특정 run 상세
 
 ---
