@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+set -eu
+
+# Allow skipping:
+# - git push --no-verify
+# - or: BALANCEOPS_SKIP_PRE_PUSH=1 git push
+if [ "${BALANCEOPS_SKIP_PRE_PUSH:-}" = "1" ]; then
+  echo "[pre-push] skipped (BALANCEOPS_SKIP_PRE_PUSH=1)"
+  exit 0
+fi
+
+ROOT="$(git rev-parse --show-toplevel)"
+
+echo "[pre-push] running local CI check (skip e2e)"
+
+# Prefer venv-installed console script if present
+if [ -x "$ROOT/.venv/Scripts/balanceops-ci-check.exe" ]; then
+  "$ROOT/.venv/Scripts/balanceops-ci-check.exe" --skip-e2e
+  exit $?
+fi
+
+if [ -x "$ROOT/.venv/bin/balanceops-ci-check" ]; then
+  "$ROOT/.venv/bin/balanceops-ci-check" --skip-e2e
+  exit $?
+fi
+
+# Fallback to python -m (prefer venv python)
+PY="python"
+if [ -x "$ROOT/.venv/Scripts/python.exe" ]; then
+  PY="$ROOT/.venv/Scripts/python.exe"
+elif [ -x "$ROOT/.venv/bin/python" ]; then
+  PY="$ROOT/.venv/bin/python"
+fi
+
+"$PY" -m balanceops.tools.ci_check --skip-e2e
