@@ -52,6 +52,17 @@ python -m balanceops.tools.e2e
 .\scripts\dashboard.ps1
 ```
 
+## CLI 커맨드 (editable 설치 시)
+
+아래 커맨드는 `python -m ...` 대신 사용할 수 있습니다.
+
+- `balanceops-ci-check --skip-e2e` : 로컬 CI 원샷 점검(포맷/린트/테스트)
+- `balanceops-e2e --port 8010` : E2E 원샷 점검
+- `balanceops-smoke-http --host 127.0.0.1 --port 8000` : 실행 중인 API에 smoke 요청
+- `balanceops-demo-run` : 더미 run 생성(artifact + DB 기록)
+- `balanceops-promote --run-id <RUN_ID>` : run_id로 current 수동 승격
+
+
 ## 주요 API 엔드포인트
 
 - GET `/health` : 헬스 체크
