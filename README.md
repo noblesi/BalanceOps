@@ -140,6 +140,23 @@ GitHub Actions에서는 보통 아래를 확인합니다.
 - 스킵: `git push --no-verify` 또는 `BALANCEOPS_SKIP_PRE_PUSH=1 git push`
 
 
+### 원샷 점검 스크립트 (추천)
+
+로컬에서 CI와 동일한 점검을 한 번에 실행합니다. (기본은 `.ci/` sandbox 사용)
+
+- Windows(PowerShell): `.\scripts\check.ps1 -SkipE2E`
+- Linux/macOS: `./scripts/check.sh --skip-e2e`
+
+E2E까지 포함하려면:
+- Windows: `.\scripts\check.ps1`
+- Linux/macOS: `./scripts/check.sh`
+
+포트 변경:
+- Windows: `.\scripts\check.ps1 -Port 8010`
+- Linux/macOS: `./scripts/check.sh --port 8010`
+
+
+
 ### 로컬에서 CI와 동일하게 한 번에 점검하기
 
 - Windows(PowerShell): `.\scripts\ci_check.ps1`  (e2e 스킵: `.\scripts\ci_check.ps1 -SkipE2E`)
