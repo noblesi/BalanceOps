@@ -19,6 +19,16 @@ dependencies = [
   "python-dotenv",
 ]
 
+[project.scripts]
+balanceops-ci-check = "balanceops.tools.ci_check:main"
+balanceops-e2e = "balanceops.tools.e2e:main"
+balanceops-smoke-http = "balanceops.tools.smoke_http:main"
+balanceops-promote = "balanceops.registry.promote_cli:main"
+balanceops-init-db = "balanceops.tracking.init_db:main"
+balanceops-demo-run = "balanceops.pipeline.demo_run:main"
+balanceops-train-dummy = "balanceops.pipeline.train_dummy:main"
+
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8",
