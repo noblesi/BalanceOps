@@ -131,6 +131,15 @@ GitHub Actions에서는 보통 아래를 확인합니다.
 
 ---
 
+### (선택) pre-push 훅으로 푸시 전 자동 점검
+
+푸시 전에 `balanceops-ci-check --skip-e2e`를 자동 실행해 CI 실패를 미리 잡습니다.
+
+- 설치(Windows): `.\scripts\setup_hooks.ps1`
+- 설치(Linux/macOS): `./scripts/setup_hooks.sh`
+- 스킵: `git push --no-verify` 또는 `BALANCEOPS_SKIP_PRE_PUSH=1 git push`
+
+
 ### 로컬에서 CI와 동일하게 한 번에 점검하기
 
 - Windows(PowerShell): `.\scripts\ci_check.ps1`  (e2e 스킵: `.\scripts\ci_check.ps1 -SkipE2E`)
