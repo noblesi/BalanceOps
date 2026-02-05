@@ -262,7 +262,10 @@ with st.expander("Metrics Trend (최근 run 메트릭 추이)", expanded=True):
     all_metric_keys = sorted({k for it in filtered for k in (it.get("metrics") or {}).keys()})
 
     if not all_metric_keys:
-        st.info("선택된 run들에 기록된 metrics가 없어요. 먼저 scripts/train_dummy.ps1 등을 실행해 metrics를 쌓아주세요.")
+        st.info(
+            "선택된 run들에 기록된 metrics가 없어요. "
+            "먼저 scripts/train_dummy.ps1 등을 실행해 metrics를 쌓아주세요."
+        )
     else:
         # 기본 선택(있으면 우선)
         preferred = ["roc_auc", "f1", "bal_acc", "accuracy", "loss"]
@@ -325,7 +328,9 @@ with st.expander("Metrics Trend (최근 run 메트릭 추이)", expanded=True):
 
             trend_df = pd.DataFrame(trend_rows)
             if trend_df.empty:
-                st.info("차트에 사용할 run 데이터가 없어요. (created_at 파싱 실패 또는 필터 결과 없음)")
+                st.info(
+                    "차트에 사용할 run 데이터가 없어요. (created_at 파싱 실패 또는 필터 결과 없음)"
+                )
             else:
                 trend_df = trend_df.sort_values("created_at")
                 chart_df = trend_df.set_index("created_at")[picked_metrics]
@@ -333,7 +338,8 @@ with st.expander("Metrics Trend (최근 run 메트릭 추이)", expanded=True):
                 st.line_chart(chart_df, use_container_width=True)
 
                 st.caption(
-                    f"표본: {len(trend_df)} runs | 선택 메트릭 누락 값: {missing} (메트릭이 없는 run은 빈 값으로 표시됩니다.)"
+                    f"표본: {len(trend_df)} runs | 선택 메트릭 누락 값: {missing} "
+                    "(메트릭이 없는 run은 빈 값으로 표시됩니다.)"
                 )
 
                 show_table = st.checkbox("Show values table", value=True)
