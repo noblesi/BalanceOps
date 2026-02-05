@@ -11,6 +11,7 @@ import pandas as pd
 import streamlit as st
 
 from balanceops.common.config import get_settings
+from balanceops.common.version import get_build_info
 from balanceops.registry.current import get_current_model_info
 from balanceops.tracking.init_db import init_db
 from balanceops.tracking.read import get_latest_run_id, get_run_detail, list_runs_summary
@@ -127,6 +128,12 @@ def _search_haystack(item: dict[str, Any]) -> str:
     return " ".join(parts).lower()
 
 
+def _short(v: str | None, n: int = 8) -> str:
+    if not v:
+        return "-"
+    return v[:n]
+
+
 # ----------------------------
 # UI
 # ----------------------------
@@ -134,7 +141,7 @@ st.title("BalanceOps Dashboard")
 st.caption("Timezone: KST (Asia/Seoul)")
 
 # Header
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns([2, 1.2, 1.2])
 
 with col1:
     st.subheader("Current Model")
@@ -142,10 +149,29 @@ with col1:
     st.json(_format_current_model_info(info))
 
 with col2:
+    st.subheader("Build")
+    b = get_build_info()
+    git = b.get("git") or {}
+    pkg = b.get("package") or {}
+    py = b.get("python") or {}
+
+    st.code(
+        "\n".join(
+            [
+                f"balanceops: {pkg.get('version') or '-'}",
+                f"git: {git.get('branch') or '-'}@{_short(git.get('commit'))}",
+                f"dirty: {bool(git.get('dirty'))}",
+                f"python: {py.get('version') or '-'}",
+            ]
+        )
+    )
+    with st.expander("Raw", expanded=False):
+        st.json(b)
+
+with col3:
     st.subheader("Settings")
     st.code(f"DB: {s.db_path}\nARTIFACTS: {s.artifacts_dir}\nCURRENT_MODEL: {s.current_model_path}")
 
-st.divider()
 
 # ----------------------------
 # Recent Runs (summary)

@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from balanceops.common.config import get_settings
+from balanceops.common.version import get_build_info
 from balanceops.registry.current import get_current_model_info
 from balanceops.tracking.init_db import init_db
 from balanceops.tracking.read import get_latest_run_id, get_run_detail, list_runs_summary
@@ -182,6 +183,18 @@ def _get_model():
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/version")
+def version() -> dict[str, Any]:
+    """서버 식별용 버전/빌드 정보.
+
+    - 대시보드/운영에서 "이 서버가 어떤 커밋으로 떠 있는지" 확인하는 용도.
+    """
+    return {
+        "service": "balanceops-api",
+        **get_build_info(),
+    }
 
 
 @app.get("/model")

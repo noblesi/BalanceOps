@@ -98,6 +98,10 @@ Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8000/runs/<run_id>"
 # predict
 $body = @{ features = @(0.1,0.2,-0.3,1.0,0.5,0.0,-0.2,0.9) } | ConvertTo-Json -Compress
 Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/predict" -ContentType "application/json" -Body $body
+
+# version
+Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8000/version"
+
 ```
 
 ---
