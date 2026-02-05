@@ -27,6 +27,19 @@ _KST = ZoneInfo("Asia/Seoul")
 _UTC = ZoneInfo("UTC")
 
 
+def _iso_to_kst_dt(ts: str | None) -> datetime | None:
+    """ISO timestamp(대개 UTC 저장)을 KST datetime으로 변환(차트/정렬용)."""
+    if not ts:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=_UTC)
+        return dt.astimezone(_KST)
+    except Exception:
+        return None
+
+
 def _iso_to_kst(ts: str | None, *, with_suffix: bool = True) -> str:
     """ISO timestamp(대개 UTC 저장)을 UI에서 KST로 통일 표기."""
     if not ts:
@@ -159,7 +172,12 @@ with top4:
 
 with st.spinner("Loading runs..."):
     items = list_runs_summary(
-        s.db_path, limit=int(limit), offset=0, include_metrics=bool(include_metrics)
+        # 메트릭 추이/비교 기능을 위해 항상 메트릭을 로드한다.
+        # 표에서 보여줄지 여부는 include_metrics 체크박스로 제어.
+        s.db_path,
+        limit=int(limit),
+        offset=0,
+        include_metrics=True,
     )
 
 if not items:
@@ -235,6 +253,97 @@ if not df.empty:
     df = df[col_order]
 
 st.dataframe(df, use_container_width=True, hide_index=True)
+
+# ----------------------------
+# Metrics Trend
+# ----------------------------
+with st.expander("Metrics Trend (최근 run 메트릭 추이)", expanded=True):
+    # filtered는 최신순(내림차순)으로 쌓임
+    all_metric_keys = sorted({k for it in filtered for k in (it.get("metrics") or {}).keys()})
+
+    if not all_metric_keys:
+        st.info("선택된 run들에 기록된 metrics가 없어요. 먼저 scripts/train_dummy.ps1 등을 실행해 metrics를 쌓아주세요.")
+    else:
+        # 기본 선택(있으면 우선)
+        preferred = ["roc_auc", "f1", "bal_acc", "accuracy", "loss"]
+        default_metrics = [m for m in preferred if m in all_metric_keys]
+        if not default_metrics:
+            default_metrics = [all_metric_keys[0]]
+
+        c1, c2 = st.columns([3, 2])
+        with c1:
+            picked_metrics = st.multiselect(
+                "Metrics",
+                options=all_metric_keys,
+                default=default_metrics,
+                help="선택한 metric들의 시간(KST) 기준 추이를 그립니다.",
+            )
+        with c2:
+            max_points = len(filtered)
+            if max_points < 2:
+                points = max_points
+            else:
+                points = st.slider(
+                    "Points (latest)",
+                    min_value=2,
+                    max_value=max_points,
+                    value=min(50, max_points),
+                    help="필터된 목록에서 최신 N개 run을 사용합니다.",
+                )
+
+        if not picked_metrics:
+            st.info("메트릭을 1개 이상 선택해 주세요.")
+        elif points < 2:
+            st.info("차트를 그리려면 run이 최소 2개 이상 필요합니다.")
+        else:
+            recent = filtered[:points]
+            trend_rows: list[dict[str, Any]] = []
+            missing = 0
+
+            # 오래된 → 최신 순으로 쌓기(차트 x축 정렬 안정)
+            for it in reversed(recent):
+                dt_kst = _iso_to_kst_dt(_coerce_str(it.get("created_at")))
+                if dt_kst is None:
+                    continue
+
+                metrics = it.get("metrics") or {}
+                row: dict[str, Any] = {
+                    "created_at": dt_kst.replace(tzinfo=None),
+                    "created_at_text": _iso_to_kst(_coerce_str(it.get("created_at"))),
+                    "kind": _coerce_str(it.get("kind") or "-"),
+                    "run_id": _coerce_str(it.get("run_id")),
+                }
+                run_id = row["run_id"]
+                row["run"] = run_id[:8] + "…" if len(run_id) > 9 else run_id
+
+                for m in picked_metrics:
+                    if m not in metrics:
+                        missing += 1
+                    row[m] = metrics.get(m)
+
+                trend_rows.append(row)
+
+            trend_df = pd.DataFrame(trend_rows)
+            if trend_df.empty:
+                st.info("차트에 사용할 run 데이터가 없어요. (created_at 파싱 실패 또는 필터 결과 없음)")
+            else:
+                trend_df = trend_df.sort_values("created_at")
+                chart_df = trend_df.set_index("created_at")[picked_metrics]
+                chart_df = chart_df.apply(pd.to_numeric, errors="coerce")
+                st.line_chart(chart_df, use_container_width=True)
+
+                st.caption(
+                    f"표본: {len(trend_df)} runs | 선택 메트릭 누락 값: {missing} (메트릭이 없는 run은 빈 값으로 표시됩니다.)"
+                )
+
+                show_table = st.checkbox("Show values table", value=True)
+                if show_table:
+                    table_cols = ["created_at_text", "kind", "run", "run_id", *picked_metrics]
+                    st.dataframe(
+                        trend_df[table_cols],
+                        use_container_width=True,
+                        hide_index=True,
+                    )
 
 st.divider()
 
@@ -437,18 +546,3 @@ with tab_manifest:
             view_pointer = dict(pointer)
             view_pointer["created_at"] = _iso_to_kst(_coerce_str(pointer.get("created_at")))
         st.json(view_pointer)
-
-        mp = pointer.get("manifest_path") if isinstance(pointer, dict) else None
-        if mp:
-            pth = _resolve_path(s.artifacts_dir, str(mp))
-            if pth.exists():
-                try:
-                    st.subheader("manifest.json")
-                    st.json(json.loads(pth.read_text(encoding="utf-8")))
-                except Exception as e:
-                    st.warning(f"Failed to read manifest.json: {e}")
-            else:
-                st.warning(f"manifest_path not found: {pth}")
-
-with st.expander("Raw detail (debug)"):
-    st.json(detail)
