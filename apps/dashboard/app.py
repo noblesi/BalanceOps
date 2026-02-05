@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
+import httpx
 import pandas as pd
 import streamlit as st
 
@@ -134,6 +135,20 @@ def _short(v: str | None, n: int = 8) -> str:
     return v[:n]
 
 
+@st.cache_data(show_spinner=False, ttl=10)
+def _fetch_api_version(api_base_url: str) -> tuple[dict[str, Any] | None, str | None]:
+    url = api_base_url.rstrip("/") + "/version"
+    try:
+        r = httpx.get(url, timeout=2.0)
+        r.raise_for_status()
+        data = r.json()
+        if not isinstance(data, dict):
+            return None, "invalid json response"
+        return data, None
+    except Exception as e:
+        return None, str(e)
+
+
 # ----------------------------
 # UI
 # ----------------------------
@@ -141,7 +156,7 @@ st.title("BalanceOps Dashboard")
 st.caption("Timezone: KST (Asia/Seoul)")
 
 # Header
-col1, col2, col3 = st.columns([2, 1.2, 1.2])
+col1, col2, col3 = st.columns([2, 1.4, 1.4])
 
 with col1:
     st.subheader("Current Model")
@@ -149,24 +164,42 @@ with col1:
     st.json(_format_current_model_info(info))
 
 with col2:
-    st.subheader("Build")
-    b = get_build_info()
-    git = b.get("git") or {}
-    pkg = b.get("package") or {}
-    py = b.get("python") or {}
+    st.subheader("Build (Server)")
 
-    st.code(
-        "\n".join(
-            [
-                f"balanceops: {pkg.get('version') or '-'}",
-                f"git: {git.get('branch') or '-'}@{_short(git.get('commit'))}",
-                f"dirty: {bool(git.get('dirty'))}",
-                f"python: {py.get('version') or '-'}",
-            ]
-        )
+    api_url = st.text_input(
+        "API URL",
+        value=s.api_base_url,
+        help="대시보드가 이 주소의 /version 을 호출합니다.",
     )
-    with st.expander("Raw", expanded=False):
-        st.json(b)
+
+    ver, err = _fetch_api_version(api_url)
+
+    if ver:
+        git = ver.get("git") or {}
+        pkg = ver.get("package") or {}
+        py = ver.get("python") or {}
+
+        st.code(
+            "\n".join(
+                [
+                    f"balanceops: {pkg.get('version') or '-'}",
+                    f"git: {git.get('branch') or '-'}@{_short(git.get('commit'))}",
+                    f"dirty: {bool(git.get('dirty'))}",
+                    f"python: {py.get('version') or '-'}",
+                ]
+            )
+        )
+
+        with st.expander("Raw (/version)", expanded=False):
+            st.json(ver)
+    else:
+        st.warning("API /version 을 가져오지 못했습니다.")
+        if err:
+            st.code(err)
+
+        # (옵션) 서버가 꺼져있을 때도 로컬 빌드 확인 가능
+        with st.expander("Local build (fallback)", expanded=False):
+            st.json(get_build_info())
 
 with col3:
     st.subheader("Settings")

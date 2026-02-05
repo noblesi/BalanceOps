@@ -15,6 +15,7 @@ class Settings:
     db_path: str
     artifacts_dir: str
     current_model_path: str
+    api_base_url: str
 
 
 def get_settings() -> Settings:
@@ -24,8 +25,12 @@ def get_settings() -> Settings:
 
     db_path = os.getenv("BALANCEOPS_DB", "data/balanceops.db")
     artifacts_dir = os.getenv("BALANCEOPS_ARTIFACTS", "artifacts")
-    current_model_path = os.getenv("BALANCEOPS_CURRENT_MODEL", "artifacts/models/current.joblib")
+    current_model_path = os.getenv(
+        "BALANCEOPS_CURRENT_MODEL",
+        "artifacts/models/current.joblib",
+    )
 
+    api_base_url = os.getenv("BALANCEOPS_API_URL", "http://127.0.0.1:8000").rstrip("/")
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     Path(artifacts_dir).mkdir(parents=True, exist_ok=True)
     Path(current_model_path).parent.mkdir(parents=True, exist_ok=True)
@@ -34,4 +39,5 @@ def get_settings() -> Settings:
         db_path=db_path,
         artifacts_dir=artifacts_dir,
         current_model_path=current_model_path,
+        api_base_url=api_base_url,
     )
