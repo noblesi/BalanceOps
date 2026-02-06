@@ -240,4 +240,68 @@ $env:BALANCEOPS_DB = "data/balanceops.db"
 $env:BALANCEOPS_ARTIFACTS = "artifacts"
 $env:BALANCEOPS_CURRENT_MODEL = "artifacts/models/current.joblib"
 ```
+---
 
+## Troubleshooting
+
+### 1. CI에서 `ruff format --check .`가 실패해요
+로컬에서 포맷을 먼저 맞춘 뒤 다시 푸시하세요.
+
+```powershell
+ruff format .
+ruff check .
+pytest -q
+```
+
+### 2. pre-push에서 막혀요 (로컬 CI 체크 실패)
+git push 전에 훅이 ruff/pytest를 실행합니다. 아래 “원샷 점검”으로 한 번에 확인할 수 있어요.
+
+.\scripts\check.ps1
+### 3. Dashboard에서 API /version 을 가져오지 못했습니다
+대개 아래 중 하나입니다.
+
+- API 서버가 꺼져있음
+- API URL이 잘못됨(포트/호스트)
+- 방화벽/네트워크 문제
+- 서버가 응답은 했지만 /version이 에러를 반환함
+
+해결 방법
+
+- API 실행
+.\scripts\serve.ps1
+
+- 대시보드의 API URL이 http://127.0.0.1:8000(또는 실제 서버 주소)인지 확인
+
+- 대시보드에서 새로고침 버튼을 눌러 캐시를 갱신
+
+### 4. Dashboard에 No runs yet가 떠요
+아직 실험(run)이 생성되지 않은 상태입니다. 아래 중 하나를 실행해 run을 만든 뒤 새로고침하세요.
+
+.\scripts\run_once.ps1
+# 또는
+python -m balanceops.pipeline.demo_run
+
+### 5. /predict가 NO_CURRENT_MODEL로 실패해요
+current 모델이 아직 승격되지 않았습니다. 더미 학습/승격을 실행해 current를 만든 뒤 다시 호출하세요.
+
+.\scripts\train_dummy.ps1
+# 또는
+python -m balanceops.pipeline.train_dummy
+
+### 6. 포트 충돌이 나요 (8000 / 8501)
+이미 같은 포트를 쓰는 프로세스가 있을 수 있어요.
+
+- API(FastAPI): 기본 8000
+- Dashboard(Streamlit): 기본 8501
+
+해결
+
+- 기존 실행 중인 터미널/프로세스를 종료하거나
+- 다른 포트로 실행(예: API는 8001, 대시보드는 8502 등)
+
+### 7. Windows에서 스크립트 실행이 차단돼요
+PowerShell 실행 정책 때문에 .ps1 실행이 막힐 수 있습니다.
+
+현재 사용자 범위에서만 허용하려면:
+
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
