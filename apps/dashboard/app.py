@@ -137,16 +137,38 @@ def _short(v: str | None, n: int = 8) -> str:
 
 @st.cache_data(show_spinner=False, ttl=10)
 def _fetch_api_version(api_base_url: str) -> tuple[dict[str, Any] | None, str | None]:
+    """API /version 호출(실패해도 대시보드가 죽지 않게).
+
+    - 정상: (dict, None)
+    - 실패: (None, error_message)
+    """
     url = api_base_url.rstrip("/") + "/version"
     try:
         r = httpx.get(url, timeout=2.0)
         r.raise_for_status()
+
         data = r.json()
         if not isinstance(data, dict):
-            return None, "invalid json response"
+            return None, "Invalid /version payload (not a JSON object)."
         return data, None
+
+    except httpx.TimeoutException:
+        return None, "Timeout while calling /version."
+
+    except httpx.HTTPStatusError as e:
+        status = e.response.status_code
+        return None, f"HTTP {status} from /version."
+
+    except httpx.RequestError as e:
+        # DNS/ConnectionError 등 네트워크 계열
+        return None, f"Request error: {type(e).__name__}"
+
+    except ValueError:
+        # JSON decode error
+        return None, "Invalid JSON from /version."
+
     except Exception as e:
-        return None, str(e)
+        return None, f"Unexpected error: {type(e).__name__}: {e}"
 
 
 # ----------------------------
@@ -172,6 +194,11 @@ with col2:
         help="대시보드가 이 주소의 /version 을 호출합니다.",
     )
 
+    # 새로고침 버튼: 캐시 클리어 + rerun
+    if st.button("새로고침", key="refresh_api_version", use_container_width=True):
+        _fetch_api_version.clear()
+        st.rerun()
+
     ver, err = _fetch_api_version(api_url)
 
     if ver:
@@ -195,7 +222,8 @@ with col2:
     else:
         st.warning("API /version 을 가져오지 못했습니다.")
         if err:
-            st.code(err)
+            st.caption(f"- 원인: {err}")
+        st.caption(r"- 힌트: API 실행 `.\scripts\serve.ps1`")
 
         # (옵션) 서버가 꺼져있을 때도 로컬 빌드 확인 가능
         with st.expander("Local build (fallback)", expanded=False):
@@ -397,7 +425,8 @@ with st.expander("Metrics Trend (최근 run 메트릭 추이)", expanded=True):
                 st.line_chart(chart_df, use_container_width=True)
 
                 st.caption(
-                    f"표본: {len(trend_df)} runs | 선택 메트릭 누락 값: {missing} "
+                    f"표본: {len(trend_df)} runs | "
+                    f"선택 메트릭 누락 값: {missing} "
                     "(메트릭이 없는 run은 빈 값으로 표시됩니다.)"
                 )
 
