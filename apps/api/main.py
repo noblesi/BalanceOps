@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,8 +22,8 @@ from balanceops.tracking.read import get_latest_run_id, get_run_detail, list_run
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    # startup: 여기에서 기존 on_event("startup") 로 하던 작업 수행
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    # startup: 기존 @app.on_event("startup")에서 하던 작업을 여기로 이동
     s = get_settings()
     init_db(s.db_path)
     yield
