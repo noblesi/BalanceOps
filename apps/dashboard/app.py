@@ -354,13 +354,11 @@ with st.expander("Metrics Trend (최근 run 메트릭 추이)", expanded=True):
             "먼저 scripts/train_dummy.ps1 등을 실행해 metrics를 쌓아주세요."
         )
     else:
-        # 기본 선택(있으면 우선)
         preferred = ["roc_auc", "f1", "bal_acc", "accuracy", "loss"]
-        default_metrics = [m for m in preferred if m in all_metric_keys]
-        if not default_metrics:
-            default_metrics = [all_metric_keys[0]]
+        default_metrics = [m for m in preferred if m in all_metric_keys] or [all_metric_keys[0]]
 
-        c1, c2 = st.columns([3, 2])
+        c1, c2, c3 = st.columns([3, 2, 2])
+
         with c1:
             picked_metrics = st.multiselect(
                 "Metrics",
@@ -368,6 +366,7 @@ with st.expander("Metrics Trend (최근 run 메트릭 추이)", expanded=True):
                 default=default_metrics,
                 help="선택한 metric들의 시간(KST) 기준 추이를 그립니다.",
             )
+
         with c2:
             max_points = len(filtered)
             if max_points < 2:
@@ -381,6 +380,13 @@ with st.expander("Metrics Trend (최근 run 메트릭 추이)", expanded=True):
                     help="필터된 목록에서 최신 N개 run을 사용합니다.",
                 )
 
+        with c3:
+            drop_all_nan = st.checkbox(
+                "Drop all-missing rows",
+                value=True,
+                help="선택 메트릭이 전부 없는 run은 차트에서 제외합니다.",
+            )
+
         if not picked_metrics:
             st.info("메트릭을 1개 이상 선택해 주세요.")
         elif points < 2:
@@ -388,7 +394,6 @@ with st.expander("Metrics Trend (최근 run 메트릭 추이)", expanded=True):
         else:
             recent = filtered[:points]
             trend_rows: list[dict[str, Any]] = []
-            missing = 0
 
             # 오래된 → 최신 순으로 쌓기(차트 x축 정렬 안정)
             for it in reversed(recent):
@@ -403,43 +408,56 @@ with st.expander("Metrics Trend (최근 run 메트릭 추이)", expanded=True):
                     "kind": _coerce_str(it.get("kind") or "-"),
                     "run_id": _coerce_str(it.get("run_id")),
                 }
+
                 run_id = row["run_id"]
                 row["run"] = run_id[:8] + "…" if len(run_id) > 9 else run_id
 
                 for m in picked_metrics:
-                    if m not in metrics:
-                        missing += 1
                     row[m] = metrics.get(m)
 
                 trend_rows.append(row)
 
             trend_df = pd.DataFrame(trend_rows)
-            if trend_df.empty:
+            if trend_df.empty or len(trend_df) < 2:
                 st.info(
-                    "차트에 사용할 run 데이터가 없어요. (created_at 파싱 실패 또는 필터 결과 없음)"
+                    "차트에 사용할 유효 run 데이터가 2개 미만입니다. "
+                    "(created_at 파싱 실패/필터 영향)"
                 )
             else:
                 trend_df = trend_df.sort_values("created_at")
                 chart_df = trend_df.set_index("created_at")[picked_metrics]
                 chart_df = chart_df.apply(pd.to_numeric, errors="coerce")
-                st.line_chart(chart_df, use_container_width=True)
 
-                st.caption(
-                    f"표본: {len(trend_df)} runs | "
-                    f"선택 메트릭 누락 값: {missing} "
-                    "(메트릭이 없는 run은 빈 값으로 표시됩니다.)"
-                )
+                if drop_all_nan:
+                    chart_df = chart_df.dropna(how="all")
 
-                show_table = st.checkbox("Show values table", value=True)
-                if show_table:
-                    table_cols = ["created_at_text", "kind", "run", "run_id", *picked_metrics]
-                    st.dataframe(
-                        trend_df[table_cols],
-                        use_container_width=True,
-                        hide_index=True,
+                if chart_df.empty or len(chart_df) < 2:
+                    st.info("차트에 표시할 유효 포인트가 2개 미만입니다. (all-missing 제거 영향)")
+                else:
+                    st.line_chart(chart_df, use_container_width=True)
+
+                    missing_cells = int(chart_df.isna().sum().sum())
+                    total_cells = int(chart_df.size)
+                    used_points = int(len(chart_df))
+
+                    start_txt = str(trend_df["created_at_text"].iloc[0])
+                    end_txt = str(trend_df["created_at_text"].iloc[-1])
+
+                    st.caption(
+                        f"표본: {points} (필터 기준) | 유효 포인트: {used_points} | "
+                        f"누락 셀: {missing_cells}/{total_cells} | "
+                        f"기간: {start_txt} ~ {end_txt}"
                     )
 
-st.divider()
+                    show_table = st.checkbox("Show values table", value=True)
+                    if show_table:
+                        table_cols = ["created_at_text", "kind", "run", "run_id", *picked_metrics]
+                        st.dataframe(
+                            trend_df[table_cols],
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+
 
 # ----------------------------
 # Drilldown
