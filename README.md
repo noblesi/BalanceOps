@@ -305,3 +305,13 @@ PowerShell 실행 정책 때문에 .ps1 실행이 막힐 수 있습니다.
 현재 사용자 범위에서만 허용하려면:
 
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+
+## Docker / Compose (API + Dashboard)
+
+로컬에 Python을 설치하지 않아도 **API + 대시보드**를 한 번에 띄울 수 있습니다.
+
+```bash
+docker compose up --build
+```
+- API: http://localhost:8000/health
+- Dashboard: http://localhost:18501
