@@ -1,0 +1,25 @@
+.venv/
+__pycache__/
+*.pyc
+
+.pytest_cache/
+.ruff_cache/
+.ci/
+
+# local runtime outputs
+data/
+artifacts/
+*.db
+*.sqlite
+*.joblib
+
+# packaging/build
+*.egg-info/
+dist/
+build/
+
+# local secrets
+.env
+
+# optional: keep image lean (gitinfo will show null unless you mount .git)
+.git/

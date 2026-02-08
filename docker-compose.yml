@@ -1,0 +1,55 @@
+services:
+  api:
+    build: .
+    image: balanceops:local
+    command:
+      - uvicorn
+      - apps.api.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    ports:
+      - "8000:8000"
+    environment:
+      BALANCEOPS_DB: data/balanceops.db
+      BALANCEOPS_ARTIFACTS: artifacts
+      BALANCEOPS_CURRENT_MODEL: artifacts/models/current.joblib
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./data:/app/data
+      - ./artifacts:/app/artifacts
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  dashboard:
+    image: balanceops:local
+    command:
+      - streamlit
+      - run
+      - apps/dashboard/app.py
+      - --server.address=0.0.0.0
+      - --server.port=8501
+      - --server.headless=true
+      - --browser.gatherUsageStats=false
+    ports:
+      - "127.0.0.1:18501:8501"
+    environment:
+      BALANCEOPS_DB: data/balanceops.db
+      BALANCEOPS_ARTIFACTS: artifacts
+      BALANCEOPS_CURRENT_MODEL: artifacts/models/current.joblib
+      BALANCEOPS_API_URL: http://api:8000
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./data:/app/data
+      - ./artifacts:/app/artifacts
+    depends_on:
+      api:
+        condition: service_healthy
