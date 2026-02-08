@@ -23,11 +23,11 @@ from balanceops.tracking.read import get_latest_run_id, get_run_detail, list_run
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    # startup: 기존 @app.on_event("startup")에서 하던 작업을 여기로 이동
+    # startup
     s = get_settings()
     init_db(s.db_path)
     yield
-    # shutdown: 필요하면 정리 작업(없으면 비워둬도 됨)
+    # shutdown: 필요하면 정리 작업
 
 
 app = FastAPI(lifespan=lifespan)
