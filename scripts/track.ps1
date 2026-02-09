@@ -33,7 +33,10 @@ function Run-Git([string[]]$GitArgs) {
   }
 }
 
-
+function Iso-Time {
+  # 예: 2026-02-09T18:12:34+09:00
+  (Get-Date).ToString("yyyy-MM-ddTHH:mm:ssK")
+}
 
 $ts = Get-Date -Format "yyyyMMdd_HHmmss"
 $ReportPath = Join-Path $RepoRoot ".ci/track/track_$ts.md"
@@ -64,12 +67,21 @@ function EmitCmd([string]$title, [string[]]$gitArgs) {
 
 Write-Section "BalanceOps Track"
 Emit ("repo: " + $RepoRoot.Path)
-Emit ("time: " + (Get-Date).ToString("s"))
+Emit ("time: " + (Iso-Time))
+Emit ("remote: " + $Remote)
+Emit ("branch: " + $Branch)
+Emit ("local_only: " + ($(if ($LocalOnly) { "1" } else { "0" })))
+Emit ("write_report: " + ($(if ($WriteReport) { "1" } else { "0" })))
 
-# 항상 로컬 변경부터 표시
+# 항상 로컬 변경부터 표시 (track.sh parity)
 Write-Section "Local status"
 EmitCmd "git status -sb" @("status","-sb") | Out-Null
-EmitCmd "untracked files (??)" @("status","--porcelain") | Out-Null
+EmitCmd "status porcelain (all changes)" @("status","--porcelain") | Out-Null
+EmitCmd "staged diff (name-status)" @("diff","--cached","--name-status") | Out-Null
+EmitCmd "unstaged diff (name-status)" @("diff","--name-status") | Out-Null
+EmitCmd "added files staged only (A)" @("diff","--cached","--name-status","--diff-filter=A") | Out-Null
+EmitCmd "untracked files only" @("ls-files","--others","--exclude-standard") | Out-Null
+EmitCmd "recent commits (-n 10)" @("log","--oneline","--decorate","-n","10") | Out-Null
 
 if ($LocalOnly) {
   Emit ""
@@ -79,9 +91,9 @@ if ($LocalOnly) {
   $fetch = Run-Git @("fetch", $Remote)
   if ($fetch.Code -ne 0) {
     Emit "원격 fetch 실패: $Remote"
-    if ($fetch.Output) { Emit $fetch.Output }
+    if ($fetch.Output) { ($fetch.Output -split "\r?\n") | ForEach-Object { Emit $_ } }
     Emit ""
-    Emit "=> fallback: 로컬에서 staged/unstaged/추가 파일만 추적합니다."
+    Emit "=> fallback: 로컬 변경/추가 파일 중심으로 추적합니다."
   } else {
     Emit "fetch ok: $Remote"
     $upstream = "$Remote/$Branch"
@@ -96,7 +108,6 @@ if ($LocalOnly) {
       EmitCmd "incoming commits (HEAD..$upstream)" @("log","--oneline","--decorate","--max-count","30","HEAD.."+$upstream) | Out-Null
       EmitCmd "changed files (name-status)" @("diff","--name-status","HEAD",$upstream) | Out-Null
       EmitCmd "added files only (A)" @("diff","--name-status","--diff-filter=A","HEAD",$upstream) | Out-Null
-
     }
   }
 }
@@ -104,7 +115,7 @@ if ($LocalOnly) {
 if ($WriteReport) {
   New-Item -ItemType Directory -Force (Split-Path -Parent $ReportPath) | Out-Null
 
-  # UTF-8 with BOM으로 리포트 저장(한글 깨짐 방지)
+  # UTF-8 with BOM(한글 깨짐 방지). 필요 없으면 $true -> $false로 바꿔도 됨.
   [System.IO.File]::WriteAllLines(
     $ReportPath,
     $ReportLines.ToArray(),

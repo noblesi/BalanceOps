@@ -13,7 +13,6 @@ ts="$(date +%Y%m%d_%H%M%S)"
 report="$ROOT/.ci/track/track_${ts}.md"
 
 iso_time() {
-  # portable ISO-ish time (adds colon to timezone: +0900 -> +09:00)
   date +"%Y-%m-%dT%H:%M:%S%z" | sed -E 's/([+-][0-9]{2})([0-9]{2})$/\1:\2/'
 }
 
@@ -35,7 +34,6 @@ run_git() {
   emit '```'
 }
 
-# ✅ 핵심: 전체 출력을 report로도 같이 저장 (원격 섹션 누락 방지)
 if [[ "$WRITE_REPORT" == "1" ]]; then
   mkdir -p "$(dirname "$report")"
   : > "$report"
