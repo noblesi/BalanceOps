@@ -159,6 +159,51 @@ E2E까지 포함하려면:
 - Windows: `.\scripts\check.ps1 -Port 8010`
 - Linux/macOS: `./scripts/check.sh --port 8010`
 
+---
+
+## Repo 추적(Track) - 원격 변경/추가 파일 빠르게 확인
+
+원격(예: `origin/main`) 기준으로 **들어오는 커밋/변경 파일/추가된 파일(A)** 을 요약해 보고,
+원격 접근이 안 되면 **로컬에서 staged/unstaged/추가 파일**을 중심으로 추적합니다.
+
+기본적으로 **리포트(.md)** 를 저장합니다.
+
+- 리포트 경로: `.ci/track/track_YYYYMMDD_HHMMSS.md`
+
+### Windows (PowerShell)
+
+```powershell
+# 기본: origin/main 기준 추적 + 리포트 저장
+.\scripts\track.ps1
+
+# 원격 fetch 생략(로컬만)
+.\scripts\track.ps1 -LocalOnly
+
+# 원격/브랜치 지정
+.\scripts\track.ps1 -Remote origin -Branch main
+
+# 리포트 저장 끄기
+.\scripts\track.ps1 -WriteReport:$false
+```
+
+### Linux/macOS / Git Bash (bash)
+
+```bash
+# 기본: origin/main 기준 추적 + 리포트 저장
+./scripts/track.sh
+
+# 원격 fetch 생략(로컬만)
+LOCAL_ONLY=1 ./scripts/track.sh
+
+# 원격/브랜치 지정
+REMOTE=origin BRANCH=main ./scripts/track.sh
+
+# 리포트 저장 끄기
+WRITE_REPORT=0 ./scripts/track.sh
+```
+
+> 원격 fetch가 실패(오프라인/권한/remote 미설정 등)해도 스크립트는 종료하지 않고,
+> 로컬 변경사항 및 추가된 파일을 중심으로 계속 출력합니다.
 
 
 ### 로컬에서 CI와 동일하게 한 번에 점검하기
