@@ -12,13 +12,12 @@ cd "$ROOT"
 ts="$(date +%Y%m%d_%H%M%S)"
 report="$ROOT/.ci/track/track_${ts}.md"
 
-emit() { echo "$*"; }
-emit_report() {
-  if [[ "$WRITE_REPORT" == "1" ]]; then
-    mkdir -p "$(dirname "$report")"
-    cat >> "$report"
-  fi
+iso_time() {
+  # portable ISO-ish time (adds colon to timezone: +0900 -> +09:00)
+  date +"%Y-%m-%dT%H:%M:%S%z" | sed -E 's/([+-][0-9]{2})([0-9]{2})$/\1:\2/'
 }
+
+emit() { echo "$*"; }
 
 section() {
   emit ""
@@ -36,13 +35,29 @@ run_git() {
   emit '```'
 }
 
+# ✅ 핵심: 전체 출력을 report로도 같이 저장 (원격 섹션 누락 방지)
+if [[ "$WRITE_REPORT" == "1" ]]; then
+  mkdir -p "$(dirname "$report")"
+  : > "$report"
+  exec > >(tee -a "$report") 2>&1
+fi
+
 section "BalanceOps Track"
 emit "repo: $ROOT"
-emit "time: $(date -Is)"
+emit "time: $(iso_time)"
+emit "remote: $REMOTE"
+emit "branch: $BRANCH"
+emit "local_only: $LOCAL_ONLY"
+emit "write_report: $WRITE_REPORT"
 
 section "Local status"
 run_git "git status -sb" status -sb
-run_git "untracked files (??)" status --porcelain
+run_git "status porcelain (all changes)" status --porcelain
+run_git "staged diff (name-status)" diff --cached --name-status
+run_git "unstaged diff (name-status)" diff --name-status
+run_git "added files staged only (A)" diff --cached --name-status --diff-filter=A
+run_git "untracked files only" ls-files --others --exclude-standard
+run_git "recent commits (-n 10)" log --oneline --decorate -n 10
 
 if [[ "$LOCAL_ONLY" == "1" ]]; then
   emit ""
@@ -64,19 +79,11 @@ else
     fi
   else
     emit "원격 fetch 실패: $REMOTE"
-    emit "=> fallback: 로컬에서 staged/unstaged/추가 파일만 추적합니다."
+    emit "=> fallback: 로컬 변경/추가 파일 중심으로 추적합니다."
   fi
 fi
 
 if [[ "$WRITE_REPORT" == "1" ]]; then
-  {
-    section "BalanceOps Track"
-    emit "repo: $ROOT"
-    emit "time: $(date -Is)"
-    section "Local status"
-    run_git "git status -sb" status -sb
-    run_git "untracked files (??)" status --porcelain
-  } | emit_report
   emit ""
   emit "[track] report saved: $report"
 fi
