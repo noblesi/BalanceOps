@@ -360,3 +360,26 @@ docker compose up --build
 ```
 - API: http://localhost:8000/health
 - Dashboard: http://localhost:18501
+
+
+## Tabular Baseline (CSV)
+
+### 1) 인자 없이 데모 실행 (Windows/PowerShell)
+```powershell
+.\scripts\train_tabular_baseline.ps1
+```
+실행 시 .ci/datasets/toy_binary.csv 데모 CSV를 자동 생성하고 학습/추적까지 수행합니다.
+
+### 2) 내 CSV로 실행
+.\scripts\train_tabular_baseline.ps1 -CsvPath .\data\my.csv -TargetCol label
+
+### 3) Dataset Spec(JSON)로 실행
+python -m balanceops.pipeline.train_tabular_baseline --dataset-spec .\examples\dataset_specs\csv_demo.json
+- Dataset Spec 필드
+  - kind: csv
+  - params.path: CSV 경로
+  - params.target_col: 타깃 컬럼명
+  - params.one_hot: 범주형 one-hot 여부(기본 true)
+  - params.dropna: 결측행 제거 여부(기본 true)
+  - split: (옵션) seed/test_size 같은 분할 힌트(현재 baseline은 CLI 인자를 우선 사용)
+
