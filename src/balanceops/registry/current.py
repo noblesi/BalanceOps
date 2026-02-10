@@ -55,6 +55,9 @@ def load_current_model(name: str = "balance_model"):
 
     for cp in candidates:
         if cp.exists():
-            return joblib.load(cp)
+            raw = joblib.load(cp)
+            if isinstance(raw, dict) and "model" in raw:
+                return raw["model"]
+            return raw
 
     return None
