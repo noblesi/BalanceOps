@@ -351,11 +351,15 @@ def predict(req: PredictRequest):
     if expected != got:
         raise HTTPException(
             status_code=400,
-            detail={
-                "error": "feature_size_mismatch",
-                "expected_n_features": expected,
-                "got_n_features": got,
-            },
+            detail=_err(
+                "FEATURE_SIZE_MISMATCH",
+                "Feature length mismatch.",
+                hint="Call GET /version and send features with expected_n_features length.",
+                details={
+                    "expected_n_features": expected,
+                    "got_n_features": got,
+                },
+            ),
         )
 
     proba = model.predict_proba([req.features])[0][1]
