@@ -60,6 +60,28 @@ def _error_response(request: Request, status_code: int, err: dict[str, Any]) -> 
     return JSONResponse(status_code=status_code, content=payload)
 
 
+def _infer_expected_n_features(model: Any) -> int | None:
+    # 1) sklearn 계열: Pipeline/Estimator가 n_features_in_ 제공하는 경우
+    v = getattr(model, "n_features_in_", None)
+    if isinstance(v, int) and v > 0:
+        return v
+
+    # 2) Pipeline 내부 step에서 찾기(StandardScaler 등)
+    steps = getattr(model, "named_steps", None)
+    if isinstance(steps, dict):
+        for step in steps.values():
+            vv = getattr(step, "n_features_in_", None)
+            if isinstance(vv, int) and vv > 0:
+                return vv
+
+    # 3) 커스텀 모델이 제공할 수 있는 힌트
+    v2 = getattr(model, "expected_n_features", None)
+    if isinstance(v2, int) and v2 > 0:
+        return v2
+
+    return None
+
+
 @app.middleware("http")
 async def _request_id_middleware(request: Request, call_next):
     rid = request.headers.get("X-Request-ID") or str(uuid.uuid4())
@@ -102,6 +124,13 @@ class _HotModelCache:
 
 _MODEL_LOCK = Lock()
 _MODEL_CACHE = _HotModelCache()
+
+
+def _unwrap_loaded_model(obj: Any) -> Any:
+    # train_tabular_baseline에서 dict 래퍼로 저장한 모델 호환
+    if isinstance(obj, dict) and "model" in obj:
+        return obj["model"]
+    return obj
 
 
 def _clear_model_cache() -> None:
@@ -169,7 +198,14 @@ def _get_model():
         ):
             return _MODEL_CACHE.model
 
-    model = joblib.load(p)
+    raw = joblib.load(p)
+    model = _unwrap_loaded_model(raw)
+
+    # predict_proba 계약 체크(더 친절한 에러)
+    if not hasattr(model, "predict_proba"):
+        raise RuntimeError(
+            f"current model does not support predict_proba (loaded_type={type(raw).__name__})"
+        )
 
     with _MODEL_LOCK:
         _MODEL_CACHE.db_path = db_path
@@ -191,11 +227,24 @@ def version() -> dict[str, Any]:
     """서버 식별용 버전/빌드 정보.
 
     - 대시보드/운영에서 "이 서버가 어떤 커밋으로 떠 있는지" 확인하는 용도.
+    - 추가: 현재 모델이 기대하는 feature 개수(expected_n_features)
     """
-    return {
+    info: dict[str, Any] = {
         "service": "balanceops-api",
         **get_build_info(),
     }
+
+    # 모델이 없거나 로딩 실패해도 /version은 살아있게
+    try:
+        model = _get_model()  # predict에서 쓰는 동일 로더/캐시 사용
+        info["expected_n_features"] = _infer_expected_n_features(model) or 8
+        info["model_type"] = type(model).__name__
+    except Exception as e:
+        info["expected_n_features"] = None
+        info["model_type"] = None
+        info["model_error"] = str(e)
+
+    return info
 
 
 @app.get("/model")
@@ -294,6 +343,19 @@ def predict(req: PredictRequest):
                     "to promote one."
                 ),
             ),
+        )
+
+    expected = _infer_expected_n_features(model) or 8  # 힌트가 없으면 기존 계약(8)로 fallback
+    got = len(req.features)
+
+    if expected != got:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "feature_size_mismatch",
+                "expected_n_features": expected,
+                "got_n_features": got,
+            },
         )
 
     proba = model.predict_proba([req.features])[0][1]
