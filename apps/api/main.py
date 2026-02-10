@@ -296,5 +296,5 @@ def predict(req: PredictRequest):
             ),
         )
 
-    proba = model.predict_proba(req.features)[0][1]
+    proba = model.predict_proba([req.features])[0][1]
     return {"p_win": float(proba)}
