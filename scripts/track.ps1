@@ -2,10 +2,13 @@
   [string]$Remote = "origin",
   [string]$Branch = "main",
   [switch]$LocalOnly,
-  [switch]$WriteReport = $true
+  [switch]$NoReport
 )
 
 $ErrorActionPreference = "Stop"
+
+# 기본은 리포트 저장 ON, -NoReport면 OFF
+$WriteReport = -not $NoReport
 
 # 콘솔 출력 인코딩(한글 출력 안정화)
 try { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false) } catch {}
