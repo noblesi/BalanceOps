@@ -39,9 +39,6 @@ def _request_json(
     try:
         resp = client.request(method, url, json=body, headers={"Accept": "application/json"})
     except Exception as e:
-        # NOTE: 일부 환경(특히 Windows/로컬)에서는 connect 단계의 예외가 httpx.HTTPError로
-        # 래핑되지 않고 그대로 올라오는 케이스가 있다.
-        # E2E/스모크에서 "서버 아직 안 뜸" 상황을 재시도로 흡수하기 위해 broad catch.
         return HttpResult(
             ok=False,
             status_code=None,
@@ -49,26 +46,33 @@ def _request_json(
             obj=None,
             error=f"{type(e).__name__}: {e}",
         )
-    content: str | None = None
-    obj: Any | None = None
+
+    # response body read
     try:
         content = resp.text
-        if content and content.strip():
-            try:
-                obj = resp.json()
-            except Exception:
-                obj = content
     except Exception as e:
         return HttpResult(
             ok=False,
             status_code=resp.status_code,
             content=None,
             obj=None,
-            error=f"failed to read response: {e}",
+            error=f"failed to read response body: {type(e).__name__}: {e}",
         )
 
+    obj: Any | None = None
+    if content and content.strip():
+        try:
+            obj = resp.json()
+        except Exception:
+            obj = content
+
     ok = 200 <= resp.status_code < 300
-    return HttpResult(ok=ok, status_code=resp.status_code, content=content, obj=obj, error=None)
+    error = None if ok else f"HTTP {resp.status_code}"
+    return HttpResult(ok=ok, status_code=resp.status_code, content=content, obj=obj, error=error)
+
+
+def _is_http_ok(res: HttpResult) -> bool:
+    return res.status_code is not None and 200 <= res.status_code < 300
 
 
 def _with_retry(
@@ -86,7 +90,7 @@ def _with_retry(
         res = action()
         last = res
 
-        if res.ok:
+        if res.ok or _is_http_ok(res):
             return res
 
         if res.status_code is not None and res.status_code in no_retry_codes:
@@ -192,7 +196,7 @@ def run(
             no_retry_codes={404},
         )
 
-        if not health.ok:
+        if not (health.ok or _is_http_ok(health)):
             code_text = (
                 f"HTTP {health.status_code}" if health.status_code is not None else "no-status"
             )
@@ -261,6 +265,14 @@ def run(
                     no_retry_codes={404, 400},
                 )
 
+        if pred.ok or _is_http_ok(pred):
+            print(
+                f"[smoke] {predict_path} OK (HTTP {pred.status_code}): "
+                f"{_format_obj(pred.obj, pred.content)}"
+            )
+            print("[smoke] done.")
+            return 0
+
         if pred.status_code == 404:
             msg = f"[smoke] {predict_path} returned 404 (current model missing?)"
             if fail_on_predict_404:
@@ -270,7 +282,7 @@ def run(
             return 0
 
         code_text = f"HTTP {pred.status_code}" if pred.status_code is not None else "no-status"
-        err_text = pred.error or "request failed"
+        err_text = pred.error or _format_obj(pred.obj, pred.content) or "request failed"
         err_msg = f"[smoke] {predict_path} FAILED ({code_text}): {err_text}"
 
         if allow_predict_failure:
