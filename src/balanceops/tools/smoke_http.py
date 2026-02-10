@@ -136,18 +136,24 @@ def _extract_expected_from_version(obj: Any | None) -> int | None:
 
 
 def _extract_expected_from_mismatch(obj: Any | None) -> int | None:
-    # API가 아래 형태로 400을 반환하도록 바꿨다는 전제:
-    # {"detail": {"error":"feature_size_mismatch","expected_n_features":2,"got_n_features":8}}
-    if not isinstance(obj, dict):
-        return None
-    detail = obj.get("detail")
-    if not isinstance(detail, dict):
-        return None
-    if detail.get("error") != "feature_size_mismatch":
-        return None
-    v = detail.get("expected_n_features")
-    if isinstance(v, int) and v > 0:
-        return v
+    # 1) BalanceOps API 래핑 포맷: {"ok":false,"error":{"code":...,"details":{...}}}
+    if isinstance(obj, dict) and obj.get("ok") is False:
+        err = obj.get("error")
+        if isinstance(err, dict):
+            details = err.get("details")
+            if isinstance(details, dict):
+                v = details.get("expected_n_features")
+                if isinstance(v, int) and v > 0:
+                    return v
+
+    # 2) (fallback) FastAPI 기본 포맷을 쓰는 경우: {"detail": {...}}
+    if isinstance(obj, dict):
+        detail = obj.get("detail")
+        if isinstance(detail, dict):
+            v = detail.get("expected_n_features")
+            if isinstance(v, int) and v > 0:
+                return v
+
     return None
 
 
