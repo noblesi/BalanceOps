@@ -14,7 +14,7 @@ try { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false) } 
 $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $RepoRoot
 
-function Run-Git([string[]]$GitArgs) {
+function Run_Git([string[]]$GitArgs) {
   # PowerShell이 stderr를 "에러"로 취급해도 스크립트가 멈추지 않도록,
   # 이 함수 안에서만 ErrorActionPreference를 낮춥니다.
   $old = $ErrorActionPreference
@@ -33,7 +33,7 @@ function Run-Git([string[]]$GitArgs) {
   }
 }
 
-function Iso-Time {
+function Iso_Time {
   # 예: 2026-02-09T18:12:34+09:00
   (Get-Date).ToString("yyyy-MM-ddTHH:mm:ssK")
 }
@@ -58,7 +58,7 @@ function EmitCmd([string]$title, [string[]]$gitArgs) {
   Emit ""
   Emit "## $title"
   Emit '```'
-  $r = Run-Git $gitArgs
+  $r = Run_Git $gitArgs
   if ($r.Output) { ($r.Output -split "\r?\n") | ForEach-Object { Emit $_ } }
   if ($r.Code -ne 0) { Emit "[exit=$($r.Code)]" }
   Emit '```'
@@ -67,7 +67,7 @@ function EmitCmd([string]$title, [string[]]$gitArgs) {
 
 Write-Section "BalanceOps Track"
 Emit ("repo: " + $RepoRoot.Path)
-Emit ("time: " + (Iso-Time))
+Emit ("time: " + (Iso_Time))
 Emit ("remote: " + $Remote)
 Emit ("branch: " + $Branch)
 Emit ("local_only: " + ($(if ($LocalOnly) { "1" } else { "0" })))
@@ -88,7 +88,7 @@ if ($LocalOnly) {
   Emit "(LocalOnly 모드: 원격 fetch 생략)"
 } else {
   Write-Section "Remote fetch"
-  $fetch = Run-Git @("fetch", $Remote)
+  $fetch = Run_Git @("fetch", $Remote)
   if ($fetch.Code -ne 0) {
     Emit "원격 fetch 실패: $Remote"
     if ($fetch.Output) { ($fetch.Output -split "\r?\n") | ForEach-Object { Emit $_ } }
@@ -99,7 +99,7 @@ if ($LocalOnly) {
     $upstream = "$Remote/$Branch"
 
     # upstream 존재 확인
-    $verify = Run-Git @("rev-parse","--verify",$upstream)
+    $verify = Run_Git @("rev-parse","--verify",$upstream)
     if ($verify.Code -ne 0) {
       Emit "upstream ref가 없습니다: $upstream"
     } else {
