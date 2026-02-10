@@ -114,6 +114,43 @@ def _with_retry(
     )
 
 
+def _make_features(base: list[float], n: int) -> list[float]:
+    if n <= 0:
+        return base
+    if n == len(base):
+        return base
+    if n < len(base):
+        return base[:n]
+    out: list[float] = []
+    while len(out) < n:
+        out.extend(base)
+    return out[:n]
+
+
+def _extract_expected_from_version(obj: Any | None) -> int | None:
+    if isinstance(obj, dict):
+        v = obj.get("expected_n_features")
+        if isinstance(v, int) and v > 0:
+            return v
+    return None
+
+
+def _extract_expected_from_mismatch(obj: Any | None) -> int | None:
+    # API가 아래 형태로 400을 반환하도록 바꿨다는 전제:
+    # {"detail": {"error":"feature_size_mismatch","expected_n_features":2,"got_n_features":8}}
+    if not isinstance(obj, dict):
+        return None
+    detail = obj.get("detail")
+    if not isinstance(detail, dict):
+        return None
+    if detail.get("error") != "feature_size_mismatch":
+        return None
+    v = detail.get("expected_n_features")
+    if isinstance(v, int) and v > 0:
+        return v
+    return None
+
+
 def run(
     *,
     base_url: str,
@@ -167,7 +204,25 @@ def run(
             print("[smoke] done.")
             return 0
 
-        # 2) /predict
+        # 2) /version (optional) -> expected_n_features
+        version_path = "/version"
+        ver = _with_retry(
+            name=f"GET {version_path}",
+            action=lambda: _request_json(client, method="GET", url=f"{base_url}{version_path}"),
+            retries=max(0, min(2, retries)),  # version은 가볍게(최대 2회 정도면 충분)
+            retry_delay_sec=retry_delay_sec,
+            no_retry_codes={404},
+        )
+
+        base_features = list(features)
+        expected = _extract_expected_from_version(ver.obj) if ver.ok else None
+        if expected is not None:
+            features = _make_features(base_features, expected)
+            print(
+                f"[smoke] expected_n_features(from /version): {expected} -> using {len(features)}"
+            )
+
+        # 3) /predict
         payload = {"features": features}
         pred = _with_retry(
             name=f"POST {predict_path}",
@@ -176,16 +231,29 @@ def run(
             ),
             retries=retries,
             retry_delay_sec=retry_delay_sec,
-            no_retry_codes={404},
+            no_retry_codes={404, 400},  # 400은 의미 없는 재시도 방지
         )
 
-        if pred.ok:
-            print(
-                f"[smoke] {predict_path} OK (HTTP {pred.status_code}): "
-                f"{_format_obj(pred.obj, pred.content)}"
-            )
-            print("[smoke] done.")
-            return 0
+        # 400 feature mismatch면 expected를 읽어서 1회 자동 보정 재시도
+        if pred.status_code == 400:
+            expected2 = _extract_expected_from_mismatch(pred.obj)
+            if expected2 is not None:
+                features2 = _make_features(base_features, expected2)
+                print(
+                    f"[smoke] WARN feature mismatch -> retry with expected_n_features={expected2} "
+                    f"(len {len(features)} -> {len(features2)})",
+                    file=sys.stderr,
+                )
+                payload2 = {"features": features2}
+                pred = _with_retry(
+                    name=f"POST {predict_path}",
+                    action=lambda: _request_json(
+                        client, method="POST", url=f"{base_url}{predict_path}", body=payload2
+                    ),
+                    retries=retries,
+                    retry_delay_sec=retry_delay_sec,
+                    no_retry_codes={404, 400},
+                )
 
         if pred.status_code == 404:
             msg = f"[smoke] {predict_path} returned 404 (current model missing?)"
