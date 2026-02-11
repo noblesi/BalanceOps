@@ -246,7 +246,7 @@ with top1:
     q = st.text_input(
         "Search (run_dir_name / run_id / note / kind / branch / commit)",
         value="",
-        placeholder="예) duel, swarm, main, 3ace13f ...",
+        placeholder="예) tabular, baseline, main, 3ace13f ...",
     )
 
 with top2:
@@ -591,11 +591,11 @@ with tab_params:
             elif isinstance(v, (bytes, bytearray)):
                 v2 = v.decode("utf-8", errors="replace")
             else:
-                v2 = str(v)  
+                v2 = str(v)
 
             kv_rows.append({"key": str(k), "value": v2})
 
-        kv_df = pd.DataFrame(kv_rows).astype(str) 
+        kv_df = pd.DataFrame(kv_rows).astype(str)
         st.dataframe(kv_df, width="stretch", hide_index=True)
 
 
