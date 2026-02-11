@@ -351,6 +351,25 @@ PowerShell 실행 정책 때문에 .ps1 실행이 막힐 수 있습니다.
 
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
+### 8. VS Code에서 `httpx` 같은 import를 못 찾는다고(Pylance) 떠요
+이 경고는 **터미널(base/.venv)을 무엇으로 쓰느냐**보다, VS Code가 **어떤 Python 인터프리터(가상환경)를 선택했느냐**에 따라 발생합니다.
+
+해결 순서(Windows 기준):
+
+1) VS Code에서 `Ctrl+Shift+P` → **Python: Select Interpreter**
+2) `BalanceOps\.venv\Scripts\python.exe` (또는 `.venv`)를 선택
+3) 필요하면 창 재로드(Developer: Reload Window)
+
+그리고 선택된 인터프리터에서 `httpx`가 설치돼 있어야 합니다.
+
+```powershell
+# 가장 안전: 현재 인터프리터에 설치
+python -m pip install -r requirements.txt
+
+# 또는 단일 패키지만
+python -m pip install httpx
+```
+
 ## Docker / Compose (API + Dashboard)
 
 로컬에 Python을 설치하지 않아도 **API + 대시보드**를 한 번에 띄울 수 있습니다.
