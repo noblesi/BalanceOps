@@ -264,6 +264,8 @@ def list_runs(
         limit=limit,
         offset=offset,
         include_metrics=include_metrics,
+        artifacts_root=s.artifacts_dir,
+        include_run_dir_name=True,
     )
     return {"items": items, "limit": limit, "offset": offset, "count": len(items)}
 

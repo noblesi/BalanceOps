@@ -50,8 +50,15 @@ def list_runs_summary(
     limit: int = 20,
     offset: int = 0,
     include_metrics: bool = True,
+    artifacts_root: str | Path | None = None,
+    include_run_dir_name: bool = False,
 ) -> list[dict[str, Any]]:
-    """최근 run 요약 목록."""
+    """최근 run 요약 목록.
+
+    - include_run_dir_name=True이고 artifacts_root가 주어지면,
+      artifacts/runs/_by_id/<run_id>.json 포인터에서 run_dir_name을 함께 로드합니다.
+      (대시보드에서 사람이 읽기 쉬운 run 라벨 표시에 사용)
+    """
     con = connect(db_path)
     cur = con.cursor()
     cur.execute(
@@ -77,13 +84,19 @@ def list_runs_summary(
 
     con.close()
 
+    ar: Path | None = None
+    if include_run_dir_name and artifacts_root is not None:
+        ar = Path(artifacts_root)
+
     out: list[dict[str, Any]] = []
     for r in run_rows:
+        rid = str(r["run_id"])
+
         params = _safe_json_loads(r.get("params_json"))
         kind = params.get("kind") if isinstance(params, dict) else None
 
         item: dict[str, Any] = {
-            "run_id": r["run_id"],
+            "run_id": rid,
             "created_at": r["created_at"],
             "git": {
                 "commit": r.get("git_commit"),
@@ -93,8 +106,14 @@ def list_runs_summary(
             "note": r.get("note"),
             "kind": kind,
         }
+
         if include_metrics:
-            item["metrics"] = metrics_map.get(r["run_id"], {})
+            item["metrics"] = metrics_map.get(rid, {})
+
+        if ar is not None:
+            p = _read_manifest_pointer(ar, rid)
+            if p and isinstance(p.get("run_dir_name"), str):
+                item["run_dir_name"] = p["run_dir_name"]
 
         out.append(item)
     return out

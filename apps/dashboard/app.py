@@ -120,6 +120,7 @@ def _format_current_model_info(raw: dict) -> dict:
 def _search_haystack(item: dict[str, Any]) -> str:
     git = item.get("git") or {}
     parts = [
+        _coerce_str(item.get("run_dir_name")),
         _coerce_str(item.get("run_id")),
         _coerce_str(item.get("note")),
         _coerce_str(item.get("kind")),
@@ -195,7 +196,7 @@ with col2:
     )
 
     # 새로고침 버튼: 캐시 클리어 + rerun
-    if st.button("새로고침", key="refresh_api_version", use_container_width=True):
+    if st.button("새로고침", key="refresh_api_version", width="stretch"):
         _fetch_api_version.clear()
         st.rerun()
 
@@ -243,7 +244,7 @@ top1, top2, top3, top4 = st.columns([2.3, 1.1, 1.1, 1.2])
 
 with top1:
     q = st.text_input(
-        "Search (run_id / note / kind / branch / commit)",
+        "Search (run_dir_name / run_id / note / kind / branch / commit)",
         value="",
         placeholder="예) duel, swarm, main, 3ace13f ...",
     )
@@ -252,7 +253,7 @@ with top2:
     limit = st.selectbox("Limit", options=[20, 50, 100, 200], index=1)
 
 with top3:
-    include_metrics = st.checkbox("Include metrics", value=True)
+    include_metrics = st.checkbox("Include metrics (load + trend)", value=True)
 
 with top4:
     dirty_filter = st.selectbox("Dirty", options=["All", "Clean", "Dirty"], index=0)
@@ -264,7 +265,9 @@ with st.spinner("Loading runs..."):
         s.db_path,
         limit=int(limit),
         offset=0,
-        include_metrics=True,
+        include_metrics=include_metrics,
+        artifacts_root=s.artifacts_dir,
+        include_run_dir_name=True,
     )
 
 if not items:
@@ -312,6 +315,9 @@ for r in filtered:
     run_id = _coerce_str(r.get("run_id"))
     run_short = run_id[:8] + "…" if len(run_id) > 9 else run_id
 
+    run_dir_name = _coerce_str(r.get("run_dir_name"))
+    run_display = run_dir_name if run_dir_name else run_short
+
     git_commit = (_coerce_str(git.get("commit"))[:8]) if git.get("commit") else "-"
     git_branch = _coerce_str(git.get("branch")) or "-"
     git_dirty = bool(git.get("dirty"))
@@ -321,13 +327,14 @@ for r in filtered:
         {
             "created_at": _iso_to_kst(_coerce_str(r.get("created_at"))),
             "kind": _coerce_str(r.get("kind") or "-"),
-            "run": run_short,
-            "run_id": run_id,  # 상세 선택용(표에도 표시)
+            "run": run_display,
+            "run_id": run_id,
             "git": git_view,
             "note": _coerce_str(r.get("note") or ""),
             "metrics": _metrics_preview(metrics),
         }
     )
+
 
 df = pd.DataFrame(rows)
 
@@ -339,124 +346,139 @@ if include_metrics:
 if not df.empty:
     df = df[col_order]
 
-st.dataframe(df, use_container_width=True, hide_index=True)
+st.dataframe(df, width="stretch", hide_index=True)
 
 # ----------------------------
 # Metrics Trend
 # ----------------------------
-with st.expander("Metrics Trend (최근 run 메트릭 추이)", expanded=True):
-    # filtered는 최신순(내림차순)으로 쌓임
-    all_metric_keys = sorted({k for it in filtered for k in (it.get("metrics") or {}).keys()})
-
-    if not all_metric_keys:
-        st.info(
-            "선택된 run들에 기록된 metrics가 없어요. "
-            "먼저 scripts/train_dummy.ps1 등을 실행해 metrics를 쌓아주세요."
-        )
+with st.expander("Metrics Trend (최근 run 메트릭 추이)", expanded=include_metrics):
+    # ✅ metrics를 로드하지 않는 모드라면 Trend는 안내만
+    if not include_metrics:
+        st.info("Metrics Trend를 보려면 위에서 'Include metrics'를 켜주세요.")
     else:
-        preferred = ["roc_auc", "f1", "bal_acc", "accuracy", "loss"]
-        default_metrics = [m for m in preferred if m in all_metric_keys] or [all_metric_keys[0]]
+        # filtered는 최신순(내림차순)으로 쌓임
+        all_metric_keys = sorted({k for it in filtered for k in (it.get("metrics") or {}).keys()})
 
-        c1, c2, c3 = st.columns([3, 2, 2])
-
-        with c1:
-            picked_metrics = st.multiselect(
-                "Metrics",
-                options=all_metric_keys,
-                default=default_metrics,
-                help="선택한 metric들의 시간(KST) 기준 추이를 그립니다.",
+        if not all_metric_keys:
+            st.info(
+                "선택된 run들에 기록된 metrics가 없어요. "
+                "먼저 scripts/train_dummy.ps1 등을 실행해 metrics를 쌓아주세요."
             )
-
-        with c2:
-            max_points = len(filtered)
-            if max_points < 2:
-                points = max_points
-            else:
-                points = st.slider(
-                    "Points (latest)",
-                    min_value=2,
-                    max_value=max_points,
-                    value=min(50, max_points),
-                    help="필터된 목록에서 최신 N개 run을 사용합니다.",
-                )
-
-        with c3:
-            drop_all_nan = st.checkbox(
-                "Drop all-missing rows",
-                value=True,
-                help="선택 메트릭이 전부 없는 run은 차트에서 제외합니다.",
-            )
-
-        if not picked_metrics:
-            st.info("메트릭을 1개 이상 선택해 주세요.")
-        elif points < 2:
-            st.info("차트를 그리려면 run이 최소 2개 이상 필요합니다.")
         else:
-            recent = filtered[:points]
-            trend_rows: list[dict[str, Any]] = []
+            preferred = ["roc_auc", "f1", "bal_acc", "accuracy", "loss"]
+            default_metrics = [m for m in preferred if m in all_metric_keys] or [all_metric_keys[0]]
 
-            # 오래된 → 최신 순으로 쌓기(차트 x축 정렬 안정)
-            for it in reversed(recent):
-                dt_kst = _iso_to_kst_dt(_coerce_str(it.get("created_at")))
-                if dt_kst is None:
-                    continue
+            c1, c2, c3 = st.columns([3, 2, 2])
 
-                metrics = it.get("metrics") or {}
-                row: dict[str, Any] = {
-                    "created_at": dt_kst.replace(tzinfo=None),
-                    "created_at_text": _iso_to_kst(_coerce_str(it.get("created_at"))),
-                    "kind": _coerce_str(it.get("kind") or "-"),
-                    "run_id": _coerce_str(it.get("run_id")),
-                }
-
-                run_id = row["run_id"]
-                row["run"] = run_id[:8] + "…" if len(run_id) > 9 else run_id
-
-                for m in picked_metrics:
-                    row[m] = metrics.get(m)
-
-                trend_rows.append(row)
-
-            trend_df = pd.DataFrame(trend_rows)
-            if trend_df.empty or len(trend_df) < 2:
-                st.info(
-                    "차트에 사용할 유효 run 데이터가 2개 미만입니다. "
-                    "(created_at 파싱 실패/필터 영향)"
+            with c1:
+                picked_metrics = st.multiselect(
+                    "Metrics",
+                    options=all_metric_keys,
+                    default=default_metrics,
+                    help="선택한 metric들의 시간(KST) 기준 추이를 그립니다.",
                 )
-            else:
-                trend_df = trend_df.sort_values("created_at")
-                chart_df = trend_df.set_index("created_at")[picked_metrics]
-                chart_df = chart_df.apply(pd.to_numeric, errors="coerce")
 
-                if drop_all_nan:
-                    chart_df = chart_df.dropna(how="all")
-
-                if chart_df.empty or len(chart_df) < 2:
-                    st.info("차트에 표시할 유효 포인트가 2개 미만입니다. (all-missing 제거 영향)")
+            with c2:
+                max_points = len(filtered)
+                if max_points < 2:
+                    points = max_points
                 else:
-                    st.line_chart(chart_df, use_container_width=True)
-
-                    missing_cells = int(chart_df.isna().sum().sum())
-                    total_cells = int(chart_df.size)
-                    used_points = int(len(chart_df))
-
-                    start_txt = str(trend_df["created_at_text"].iloc[0])
-                    end_txt = str(trend_df["created_at_text"].iloc[-1])
-
-                    st.caption(
-                        f"표본: {points} (필터 기준) | 유효 포인트: {used_points} | "
-                        f"누락 셀: {missing_cells}/{total_cells} | "
-                        f"기간: {start_txt} ~ {end_txt}"
+                    points = st.slider(
+                        "Points (latest)",
+                        min_value=2,
+                        max_value=max_points,
+                        value=min(50, max_points),
+                        help="필터된 목록에서 최신 N개 run을 사용합니다.",
                     )
 
-                    show_table = st.checkbox("Show values table", value=True)
-                    if show_table:
-                        table_cols = ["created_at_text", "kind", "run", "run_id", *picked_metrics]
-                        st.dataframe(
-                            trend_df[table_cols],
-                            use_container_width=True,
-                            hide_index=True,
+            with c3:
+                drop_all_nan = st.checkbox(
+                    "Drop all-missing rows",
+                    value=True,
+                    help="선택 메트릭이 전부 없는 run은 차트에서 제외합니다.",
+                )
+
+            if not picked_metrics:
+                st.info("메트릭을 1개 이상 선택해 주세요.")
+            elif points < 2:
+                st.info("차트를 그리려면 run이 최소 2개 이상 필요합니다.")
+            else:
+                recent = filtered[:points]
+                trend_rows: list[dict[str, Any]] = []
+
+                # 오래된 → 최신 순으로 쌓기(차트 x축 정렬 안정)
+                for it in reversed(recent):
+                    dt_kst = _iso_to_kst_dt(_coerce_str(it.get("created_at")))
+                    if dt_kst is None:
+                        continue
+
+                    metrics = it.get("metrics") or {}
+                    row: dict[str, Any] = {
+                        "created_at": dt_kst.replace(tzinfo=None),
+                        "created_at_text": _iso_to_kst(_coerce_str(it.get("created_at"))),
+                        "kind": _coerce_str(it.get("kind") or "-"),
+                        "run_id": _coerce_str(it.get("run_id")),
+                    }
+
+                    # ✅ run_dir_name 우선, 없으면 run_short fallback
+                    run_id = row["run_id"]
+                    run_short = run_id[:8] + "…" if len(run_id) > 9 else run_id
+                    run_dir_name = _coerce_str(it.get("run_dir_name"))
+                    row["run"] = run_dir_name if run_dir_name else run_short
+
+                    for m in picked_metrics:
+                        row[m] = metrics.get(m)
+
+                    trend_rows.append(row)
+
+                trend_df = pd.DataFrame(trend_rows)
+                if trend_df.empty or len(trend_df) < 2:
+                    st.info(
+                        "차트에 사용할 유효 run 데이터가 2개 미만입니다. "
+                        "(created_at 파싱 실패/필터 영향)"
+                    )
+                else:
+                    trend_df = trend_df.sort_values("created_at")
+                    chart_df = trend_df.set_index("created_at")[picked_metrics]
+                    chart_df = chart_df.apply(pd.to_numeric, errors="coerce")
+
+                    if drop_all_nan:
+                        chart_df = chart_df.dropna(how="all")
+
+                    if chart_df.empty or len(chart_df) < 2:
+                        st.info(
+                            "차트에 표시할 유효 포인트가 2개 미만입니다. (all-missing 제거 영향)"
                         )
+                    else:
+                        st.line_chart(chart_df, width="stretch")
+
+                        missing_cells = int(chart_df.isna().sum().sum())
+                        total_cells = int(chart_df.size)
+                        used_points = int(len(chart_df))
+
+                        start_txt = str(trend_df["created_at_text"].iloc[0])
+                        end_txt = str(trend_df["created_at_text"].iloc[-1])
+
+                        st.caption(
+                            f"표본: {points} (필터 기준) | 유효 포인트: {used_points} | "
+                            f"누락 셀: {missing_cells}/{total_cells} | "
+                            f"기간: {start_txt} ~ {end_txt}"
+                        )
+
+                        show_table = st.checkbox("Show values table", value=True)
+                        if show_table:
+                            table_cols = [
+                                "created_at_text",
+                                "kind",
+                                "run",
+                                "run_id",
+                                *picked_metrics,
+                            ]
+                            st.dataframe(
+                                trend_df[table_cols],
+                                width="stretch",
+                                hide_index=True,
+                            )
 
 
 # ----------------------------
@@ -486,7 +508,11 @@ def _run_label(run_id: str) -> str:
         return run_id
     created_at = _iso_to_kst(_coerce_str(r.get("created_at")), with_suffix=False)
     kind = str(r.get("kind") or "-")
-    return f"{created_at} | {kind} | {run_id[:8]}…"
+
+    run_dir_name = _coerce_str(r.get("run_dir_name"))
+    tail = run_dir_name if run_dir_name else f"{run_id[:8]}…"
+
+    return f"{created_at} | {kind} | {tail}"
 
 
 ctrl1, ctrl2, ctrl3 = st.columns([3, 1, 1])
@@ -495,7 +521,7 @@ with ctrl1:
     st.selectbox("Select run", options=run_ids, key="selected_run_id", format_func=_run_label)
 
 with ctrl2:
-    if st.button("Latest", use_container_width=True):
+    if st.button("Latest", width="stretch"):
         latest_id = get_latest_run_id(artifacts_root=s.artifacts_dir, db_path=s.db_path)
         if latest_id is None:
             st.warning("No latest run found.")
@@ -504,7 +530,7 @@ with ctrl2:
             st.rerun()
 
 with ctrl3:
-    if st.button("Refresh", use_container_width=True):
+    if st.button("Refresh", width="stretch"):
         st.rerun()
 
 detail = get_run_detail(
@@ -562,10 +588,16 @@ with tab_params:
         for k, v in sorted(p.items()):
             if isinstance(v, (dict, list)):
                 v2 = json.dumps(v, ensure_ascii=False)
+            elif isinstance(v, (bytes, bytearray)):
+                v2 = v.decode("utf-8", errors="replace")
             else:
-                v2 = v
+                v2 = str(v)  
+
             kv_rows.append({"key": str(k), "value": v2})
-        st.dataframe(pd.DataFrame(kv_rows), use_container_width=True, hide_index=True)
+
+        kv_df = pd.DataFrame(kv_rows).astype(str) 
+        st.dataframe(kv_df, width="stretch", hide_index=True)
+
 
 with tab_metrics:
     metrics = detail.get("metrics") or {}
@@ -573,7 +605,7 @@ with tab_metrics:
         st.info("No metrics recorded for this run.")
     else:
         m_rows = [{"metric": k, "value": float(v)} for k, v in sorted(metrics.items())]
-        st.dataframe(pd.DataFrame(m_rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(m_rows), width="stretch", hide_index=True)
 
 with tab_artifacts:
     artifacts = detail.get("artifacts") or []
@@ -603,7 +635,7 @@ with tab_artifacts:
             )
             grouped[str(a_kind)].append((str(a_path_raw), pth))
 
-        st.dataframe(pd.DataFrame(a_rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(a_rows), width="stretch", hide_index=True)
         st.caption("다운로드는 50MB 이하 파일에만 제공됩니다.")
 
         for a_kind in sorted(grouped.keys()):
@@ -639,7 +671,7 @@ with tab_artifacts:
                                     data=data,
                                     file_name=pth.name,
                                     key=f"dl_{detail['run_id']}_{a_kind}_{i}",
-                                    use_container_width=True,
+                                    width="stretch",
                                 )
                             else:
                                 st.caption("too large")
