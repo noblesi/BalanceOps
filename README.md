@@ -384,23 +384,33 @@ docker compose up --build
 ## Tabular Baseline (CSV)
 
 ### 1) 인자 없이 데모 실행 (Windows/PowerShell)
+
 ```powershell
 .\scripts\train_tabular_baseline.ps1
 ```
-실행 시 .ci/datasets/toy_binary.csv 데모 CSV를 자동 생성하고 학습/추적까지 수행합니다.
+
+실행 시 `.ci/datasets/toy_binary.csv` 데모 CSV를 자동 생성하고 학습/추적까지 수행합니다.
 
 ### 2) 내 CSV로 실행
+
+```powershell
 .\scripts\train_tabular_baseline.ps1 -CsvPath .\data\my.csv -TargetCol label
+```
 
 ### 3) Dataset Spec(JSON)로 실행
+
+```powershell
 python -m balanceops.pipeline.train_tabular_baseline --dataset-spec .\examples\dataset_specs\csv_demo.json
-- Dataset Spec 필드
-  - kind: csv
-  - params.path: CSV 경로
-  - params.target_col: 타깃 컬럼명
-  - params.one_hot: 범주형 one-hot 여부(기본 true)
-  - params.dropna: 결측행 제거 여부(기본 true)
-  - split: (옵션) seed/test_size 같은 분할 힌트(현재 baseline은 CLI 인자를 우선 사용)
+```
+
+- Dataset Spec 필드(요약)
+  - `kind`: `csv`
+  - `params.path`: CSV 경로
+  - `params.target_col`: 타깃 컬럼명
+  - `params.one_hot`: 범주형 one-hot 여부(기본 `true`)
+  - `params.dropna`: 결측행 제거 여부(기본 `true`)
+  - `split`: (옵션) `seed` / `test_size` 같은 분할 힌트  
+    - 현재 baseline은 **CLI 인자 우선**(옵션이 있으면)으로 동작합니다.
 
 ### 4) 금융(신용) 데모 예시 실행 (Dataset Spec)
 
@@ -412,10 +422,16 @@ python -m balanceops.pipeline.train_tabular_baseline --dataset-spec .\examples\d
 # (추천) current 승격 없이 안전하게 학습만
 python -m balanceops.pipeline.train_tabular_baseline --dataset-spec .\examples\dataset_specs\finance_credit_demo.json --no-auto-promote
 
-# 실행 결과는 artifacts/ 아래에 기록됩니다.
-# - 최신 run 포인터: artifacts\runs\_latest.json
-# - candidate 모델: artifacts\models\candidates\<run_id>_tabular_baseline.joblib
+# 최신 run 포인터 확인
+type .\artifacts\runs\_latest.json
 ```
+
+실행 결과는 `artifacts/` 아래에 기록됩니다.
+
+- 최신 run 포인터: `artifacts\runs\_latest.json`
+- candidate 모델: `artifacts\models\candidates\<run_id>_tabular_baseline.joblib`
+
+---
 
 ## Dashboard에서 방금 만든 run 빠르게 찾기
 
@@ -428,26 +444,27 @@ python -m balanceops.pipeline.train_tabular_baseline --dataset-spec .\examples\d
 # 터미널 B: 대시보드 실행
 .\scripts\dashboard.ps1
 ```
-대시보드 실행 후 터미널에 출력되는 주소(예: http://127.0.0.1:8501 또는 안내된 포트)로 접속합니다.
+
+대시보드 실행 후 터미널에 출력되는 주소(예: `http://127.0.0.1:8501` 또는 안내된 포트)로 접속합니다.
 
 ### 2) 최신 run_id 확인
+
 ```powershell
 type .\artifacts\runs\_latest.json
 ```
-여기서 run_id / run_dir_name 값을 복사합니다.
+
+여기서 `run_id` / `run_dir_name` 값을 복사합니다.
 
 ### 3) 대시보드에서 run 검색
-- Recent Runs 화면에서 검색/필터 입력칸에 run_id 또는 run_dir_name을 붙여넣습니다.
 
-- 메트릭 기준으로 보고 싶다면 bal_acc, recall_1 같은 메트릭 이름으로 필터링합니다.
-
-- 선택한 run의 manifest.json, dataset.json 경로가 함께 표시되므로 재현(재학습)과 비교가 쉬워집니다.
+- **Recent Runs** 화면에서 검색/필터 입력칸에 `run_id` 또는 `run_dir_name`을 붙여넣습니다.
+- 메트릭 기준으로 보고 싶다면 `bal_acc`, `recall_1` 같은 메트릭 이름으로 필터링합니다.
+- 선택한 run의 `manifest.json`, `dataset.json` 경로가 함께 표시되므로 재현(재학습)과 비교가 쉬워집니다.
 
 ### Troubleshooting (대시보드가 API를 못 읽을 때)
-- API가 켜져 있는지 확인: .\scripts\serve.ps1
 
+- API가 켜져 있는지 확인: `.\scripts\serve.ps1`
 - 대시보드 설정된 API URL/포트가 실제 실행 포트와 같은지 확인
+- `/version` 실패 메시지가 뜨면 먼저 API 터미널 로그를 확인
 
-- /version 실패 메시지가 뜨면 먼저 API 터미널 로그를 확인
-
-- 포트(8501/18501 등)는 환경/스크립트에 따라 다를 수 있으니, dashboard.ps1 실행 시 출력되는 URL을 기준으로 안내합니다.
+> 포트(8501/18501 등)는 환경/스크립트에 따라 다를 수 있으니, **dashboard.ps1 실행 시 출력되는 URL**을 기준으로 안내합니다.
