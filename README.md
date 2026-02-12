@@ -402,3 +402,16 @@ python -m balanceops.pipeline.train_tabular_baseline --dataset-spec .\examples\d
   - params.dropna: 결측행 제거 여부(기본 true)
   - split: (옵션) seed/test_size 같은 분할 힌트(현재 baseline은 CLI 인자를 우선 사용)
 
+### 4) 금융(신용) 데모 예시 실행 (Dataset Spec)
+
+- 데이터: `examples/datasets/finance_credit_toy.csv`
+- 스펙: `examples/dataset_specs/finance_credit_demo.json`
+- 타깃 컬럼: `default` (0/1)
+
+```powershell
+# (추천) current 승격 없이 안전하게 학습만
+python -m balanceops.pipeline.train_tabular_baseline --dataset-spec .\examples\dataset_specs\finance_credit_demo.json --no-auto-promote
+
+# 실행 결과는 artifacts/ 아래에 기록됩니다.
+# - 최신 run 포인터: artifacts\runs\_latest.json
+# - candidate 모델: artifacts\models\candidates\<run_id>_tabular_baseline.joblib
