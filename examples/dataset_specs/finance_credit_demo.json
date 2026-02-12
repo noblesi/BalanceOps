@@ -1,0 +1,16 @@
+{
+  "kind": "csv",
+  "name": "finance-credit-toy-binary",
+  "params": {
+    "path": "examples/datasets/finance_credit_toy.csv",
+    "target_col": "default",
+    "one_hot": true,
+    "dropna": true,
+    "sep": ","
+  },
+  "split": {
+    "seed": 42,
+    "test_size": 0.2
+  },
+  "note": "네트워크 없이 재현 가능한 합성(신용/리스크) 데모 데이터셋입니다. 범주형(home_ownership, purpose)은 one-hot로 변환됩니다."
+}
