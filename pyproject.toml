@@ -27,6 +27,7 @@ balanceops-promote = "balanceops.registry.promote_cli:main"
 balanceops-init-db = "balanceops.tracking.init_db:main"
 balanceops-demo-run = "balanceops.pipeline.demo_run:main"
 balanceops-train-dummy = "balanceops.pipeline.train_dummy:main"
+balanceops-train-tabular-baseline = "balanceops.pipeline.train_tabular_baseline:main"
 
 
 [project.optional-dependencies]

@@ -400,6 +400,8 @@ docker compose up --build
 ### 3) Dataset Spec(JSON)로 실행
 
 ```powershell
+balanceops-train-tabular-baseline --dataset-spec .\examples\dataset_specs\csv_demo.json
+
 python -m balanceops.pipeline.train_tabular_baseline --dataset-spec .\examples\dataset_specs\csv_demo.json
 ```
 
@@ -420,6 +422,8 @@ python -m balanceops.pipeline.train_tabular_baseline --dataset-spec .\examples\d
 
 ```powershell
 # (추천) current 승격 없이 안전하게 학습만
+balanceops-train-tabular-baseline --dataset-spec .\examples\dataset_specs\finance_credit_demo.json --no-auto-promote
+
 python -m balanceops.pipeline.train_tabular_baseline --dataset-spec .\examples\dataset_specs\finance_credit_demo.json --no-auto-promote
 
 # 최신 run 포인터 확인
