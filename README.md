@@ -61,7 +61,7 @@ python -m balanceops.tools.e2e
 - `balanceops-smoke-http --host 127.0.0.1 --port 8000` : 실행 중인 API에 smoke 요청
 - `balanceops-demo-run` : 더미 run 생성(artifact + DB 기록)
 - `balanceops-promote --run-id <RUN_ID>` : run_id로 current 수동 승격
-
+- `balanceops-train-tabular-baseline --dataset-spec <PATH> [--no-auto-promote]` : Tabular Baseline 학습(CSV/Dataset Spec)
 
 ## 주요 API 엔드포인트
 
@@ -382,6 +382,22 @@ docker compose up --build
 
 
 ## Tabular Baseline (CSV)
+
+### 0) Linux/macOS / Git Bash (bash) 실행
+
+```bash
+# 인자 없이 데모 실행(데모 CSV 생성 + 학습/추적, 기본 no-auto-promote)
+./scripts/train_tabular_baseline.sh
+
+# 내 CSV로 실행
+./scripts/train_tabular_baseline.sh --csv-path ./data/my.csv --target-col label
+
+# Dataset Spec(JSON)로 실행
+./scripts/train_tabular_baseline.sh --dataset-spec ./examples/dataset_specs/csv_demo.json
+
+# 금융(신용) 데모 (승격 없이 안전 실행)
+./scripts/train_tabular_baseline.sh --dataset-spec ./examples/dataset_specs/finance_credit_demo.json --no-auto-promote
+```
 
 ### 1) 인자 없이 데모 실행 (Windows/PowerShell)
 
