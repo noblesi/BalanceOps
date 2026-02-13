@@ -1,5 +1,6 @@
 param(
   [switch]$SkipE2E = $false,
+  [switch]$IncludeTabularBaseline = $false,
   [int]$Port = 8010
 )
 
@@ -8,6 +9,15 @@ $ErrorActionPreference = "Stop"
 # 레포 루트로 이동
 $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $RepoRoot
+
+# import 안정화 (설치/엔트리포인트가 없더라도 -m 실행이 되게)
+$SrcPath = Join-Path $RepoRoot "src"
+if ($env:PYTHONPATH) {
+  $env:PYTHONPATH = "{0};{1};{2}" -f $RepoRoot.Path, $SrcPath, $env:PYTHONPATH
+} else {
+  $env:PYTHONPATH = "{0};{1}" -f $RepoRoot.Path, $SrcPath
+}
+
 
 # .ci sandbox env (기본값이 없을 때만 설정)
 if (-not $env:BALANCEOPS_DB) {
@@ -25,14 +35,13 @@ if (-not $env:PYTHONUNBUFFERED) {
 
 # balanceops-ci-check 우선 사용, 없으면 python -m fallback
 $Cmd = Get-Command balanceops-ci-check -ErrorAction SilentlyContinue
+$Args = @()
+if ($SkipE2E) { $Args += "--skip-e2e" } else { $Args += @("--port", $Port) }
+if ($IncludeTabularBaseline) { $Args += "--include-tabular-baseline" }
 
 if ($Cmd) {
   Write-Host "[check] using console script: balanceops-ci-check"
-  if ($SkipE2E) {
-    balanceops-ci-check --skip-e2e
-  } else {
-    balanceops-ci-check --port $Port
-  }
+  balanceops-ci-check @Args
   exit $LASTEXITCODE
 }
 
@@ -46,9 +55,5 @@ if (Test-Path $VenvPython) {
   Write-Host "[check] using python on PATH"
 }
 
-if ($SkipE2E) {
-  & $PythonExe -m balanceops.tools.ci_check --skip-e2e
-} else {
-  & $PythonExe -m balanceops.tools.ci_check --port $Port
-}
+& $PythonExe -m balanceops.tools.ci_check @Args
 exit $LASTEXITCODE

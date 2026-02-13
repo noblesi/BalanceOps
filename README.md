@@ -151,6 +151,10 @@ GitHub Actions에서는 보통 아래를 확인합니다.
 - Windows(PowerShell): `.\scripts\check.ps1 -SkipE2E`
 - Linux/macOS: `./scripts/check.sh --skip-e2e`
 
+Tabular Baseline 스모크까지 포함(선택, 승격 없음 / `--no-auto-promote`):
+- Windows(PowerShell): `.\scripts\check.ps1 -SkipE2E -IncludeTabularBaseline`
+- Linux/macOS / Git Bash: `./scripts/check.sh --skip-e2e --include-tabular-baseline`
+
 E2E까지 포함하려면:
 - Windows: `.\scripts\check.ps1`
 - Linux/macOS: `./scripts/check.sh`
