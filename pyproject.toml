@@ -11,6 +11,8 @@ dependencies = [
   "streamlit>=1.30",
   "pandas>=2.2",
   "numpy>=2.0",
+  "scikit-learn>=1.4",
+  "scipy",
   "fastapi",
   "httpx",
   "uvicorn[standard]",
