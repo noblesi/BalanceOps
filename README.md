@@ -56,7 +56,7 @@ python -m balanceops.tools.e2e
 
 아래 커맨드는 `python -m ...` 대신 사용할 수 있습니다.
 
-- `balanceops-ci-check --skip-e2e` : 로컬 CI 원샷 점검(포맷/린트/테스트)
+- `balanceops-ci-check [--skip-e2e] [--include-tabular-baseline] [--port 8010]` : 로컬 CI 원샷 점검(포맷/린트/테스트/선택 스모크)
 - `balanceops-e2e --port 8010` : E2E 원샷 점검
 - `balanceops-smoke-http --host 127.0.0.1 --port 8000` : 실행 중인 API에 smoke 요청
 - `balanceops-demo-run` : 더미 run 생성(artifact + DB 기록)
@@ -212,8 +212,18 @@ WRITE_REPORT=0 ./scripts/track.sh
 
 ### 로컬에서 CI와 동일하게 한 번에 점검하기
 
-- Windows(PowerShell): `.\scripts\ci_check.ps1`  (e2e 스킵: `.\scripts\ci_check.ps1 -SkipE2E`)
-- Cross-platform: `python -m balanceops.tools.ci_check`  (e2e 스킵: `python -m balanceops.tools.ci_check --skip-e2e`)
+- Windows(PowerShell): `.\scripts\ci_check.ps1`
+  - e2e 스킵: `.\scripts\ci_check.ps1 -SkipE2E`
+  - Tabular Baseline 스모크 포함(승격 없음): `.\scripts\ci_check.ps1 -SkipE2E -IncludeTabularBaseline`
+  - 포트 변경(e2e 포함 시): `.\scripts\ci_check.ps1 -Port 8010`
+- Cross-platform: `python -m balanceops.tools.ci_check`
+  - e2e 스킵: `python -m balanceops.tools.ci_check --skip-e2e`
+  - Tabular Baseline 스모크 포함(승격 없음): `python -m balanceops.tools.ci_check --skip-e2e --include-tabular-baseline`
+  - 포트 변경(e2e 포함 시): `python -m balanceops.tools.ci_check --port 8010`
+
+> 기본은 `.ci/` sandbox(DB/Artifacts/Current)로 실행합니다.
+> 로컬 기본 경로(`data/`, `artifacts/`)를 쓰려면: `python -m balanceops.tools.ci_check --no-ci-env`
+
 
 ---
 
@@ -305,7 +315,10 @@ pytest -q
 ### 2. pre-push에서 막혀요 (로컬 CI 체크 실패)
 git push 전에 훅이 ruff/pytest를 실행합니다. 아래 “원샷 점검”으로 한 번에 확인할 수 있어요.
 
+```powershell
 .\scripts\check.ps1
+```
+
 ### 3. Dashboard에서 API /version 을 가져오지 못했습니다
 대개 아래 중 하나입니다.
 
