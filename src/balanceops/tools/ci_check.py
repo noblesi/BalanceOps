@@ -6,7 +6,7 @@ This tool mirrors what GitHub Actions validates in this repo:
 2) ruff check
 3) pytest
 4) (optional) Tabular baseline smoke
-5) (optional) E2E one-shot
+5) E2E one-shot (or skip)
 
 Usage:
   python -m balanceops.tools.ci_check
@@ -22,6 +22,7 @@ import os
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 
@@ -124,39 +125,49 @@ def run_ci_check(
         )
         return 2
 
-    print("[ci_check] step 1/4: ruff format --check")
-    code = _run([ruff, "format", "--check", "."], cwd=repo_root)
-    if code != 0:
-        return code
-
-    print("[ci_check] step 2/4: ruff check")
-    code = _run([ruff, "check", "."], cwd=repo_root)
-    if code != 0:
-        return code
-
-    print("[ci_check] step 3/4: pytest")
-    code = _run([sys.executable, "-m", "pytest", "-q"], cwd=repo_root)
-    if code != 0:
-        return code
+    # Steps are built dynamically so "step i/N" always stays correct.
+    steps: list[tuple[str, Callable[[], int]]] = []
+    steps.append(
+        (
+            "ruff format --check",
+            lambda: _run([ruff, "format", "--check", "."], cwd=repo_root),
+        )
+    )
+    steps.append(("ruff check", lambda: _run([ruff, "check", "."], cwd=repo_root)))
+    steps.append(
+        (
+            "pytest",
+            lambda: _run([sys.executable, "-m", "pytest", "-q"], cwd=repo_root),
+        )
+    )
 
     if include_tabular_baseline:
-        print("[ci_check] step 4: tabular baseline smoke (no-auto-promote)")
-        code = _run_tabular_baseline_smoke(repo_root)
-        if code != 0:
-            return code
+        steps.append(
+            (
+                "tabular baseline smoke (no-auto-promote)",
+                lambda: _run_tabular_baseline_smoke(repo_root),
+            )
+        )
 
     if skip_e2e:
-        print("[ci_check] step 5: skip e2e")
-        print("[ci_check] OK")
-        return 0
+        steps.append(("skip e2e", lambda: 0))
+    else:
+        steps.append(
+            (
+                "e2e",
+                lambda: _run(
+                    [sys.executable, "-m", "balanceops.tools.e2e", "--port", str(port)],
+                    cwd=repo_root,
+                ),
+            )
+        )
 
-    print("[ci_check] step 5: e2e")
-    code = _run(
-        [sys.executable, "-m", "balanceops.tools.e2e", "--port", str(port)],
-        cwd=repo_root,
-    )
-    if code != 0:
-        return code
+    total = len(steps)
+    for i, (name, fn) in enumerate(steps, start=1):
+        print(f"[ci_check] step {i}/{total}: {name}")
+        code = fn()
+        if code != 0:
+            return code
 
     print("[ci_check] OK")
     return 0
