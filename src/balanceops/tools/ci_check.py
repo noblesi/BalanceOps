@@ -108,6 +108,18 @@ def build_parser() -> argparse.ArgumentParser:
     return ap
 
 
+def build_step_names(*, skip_e2e: bool, include_tabular_baseline: bool) -> list[str]:
+    """Return the ordered list of step names for the given option set.
+
+    Pure function: safe to regression-test without executing subprocesses.
+    """
+    names = ["ruff format --check", "ruff check", "pytest"]
+    if include_tabular_baseline:
+        names.append("tabular baseline smoke (no-auto-promote)")
+    names.append("skip e2e" if skip_e2e else "e2e")
+    return names
+
+
 def run_ci_check(
     *, port: int, skip_e2e: bool, include_tabular_baseline: bool, no_ci_env: bool
 ) -> int:
@@ -125,42 +137,26 @@ def run_ci_check(
         )
         return 2
 
-    # Steps are built dynamically so "step i/N" always stays correct.
-    steps: list[tuple[str, Callable[[], int]]] = []
-    steps.append(
-        (
-            "ruff format --check",
-            lambda: _run([ruff, "format", "--check", "."], cwd=repo_root),
-        )
-    )
-    steps.append(("ruff check", lambda: _run([ruff, "check", "."], cwd=repo_root)))
-    steps.append(
-        (
-            "pytest",
-            lambda: _run([sys.executable, "-m", "pytest", "-q"], cwd=repo_root),
-        )
-    )
+    plan = build_step_names(skip_e2e=skip_e2e, include_tabular_baseline=include_tabular_baseline)
 
-    if include_tabular_baseline:
-        steps.append(
-            (
-                "tabular baseline smoke (no-auto-promote)",
-                lambda: _run_tabular_baseline_smoke(repo_root),
-            )
-        )
+    runnables: dict[str, Callable[[], int]] = {
+        "ruff format --check": lambda: _run([ruff, "format", "--check", "."], cwd=repo_root),
+        "ruff check": lambda: _run([ruff, "check", "."], cwd=repo_root),
+        "pytest": lambda: _run([sys.executable, "-m", "pytest", "-q"], cwd=repo_root),
+        "tabular baseline smoke (no-auto-promote)": lambda: _run_tabular_baseline_smoke(repo_root),
+        "skip e2e": lambda: 0,
+        "e2e": lambda: _run(
+            [sys.executable, "-m", "balanceops.tools.e2e", "--port", str(port)],
+            cwd=repo_root,
+        ),
+    }
 
-    if skip_e2e:
-        steps.append(("skip e2e", lambda: 0))
-    else:
-        steps.append(
-            (
-                "e2e",
-                lambda: _run(
-                    [sys.executable, "-m", "balanceops.tools.e2e", "--port", str(port)],
-                    cwd=repo_root,
-                ),
-            )
-        )
+    missing = [name for name in plan if name not in runnables]
+    if missing:
+        print(f"[ci_check] ERROR: unknown step name(s) in plan: {missing}", file=sys.stderr)
+        return 2
+
+    steps: list[tuple[str, Callable[[], int]]] = [(name, runnables[name]) for name in plan]
 
     total = len(steps)
     for i, (name, fn) in enumerate(steps, start=1):
