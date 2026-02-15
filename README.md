@@ -52,6 +52,33 @@ python -m balanceops.tools.e2e
 .\scripts\dashboard.ps1
 ```
 
+### 의존성 설치 방식(runtime / dev)
+
+- **runtime**(서빙/대시보드 실행에 필요한 의존성): `requirements.txt` / `pyproject.toml`의 `dependencies`
+- **dev**(로컬 점검/테스트/포맷): `pytest`, `ruff` 등
+
+권장 설치(개발용 포함, Windows):
+
+```powershell
+.\scripts\bootstrap.ps1
+```
+
+```md
+수동 설치 예시:
+
+# runtime만 (API/대시보드 실행용)
+```powershell
+python -m pip install -r requirements.txt
+python -m pip install .
+```
+
+# dev 포함 (테스트/포맷/로컬 CI 체크)
+```powershell
+python -m pip install -r requirements-dev.txt
+# 또는 (editable + dev extras)
+python -m pip install -e ".[dev]"
+```
+
 ## CLI 커맨드 (editable 설치 시)
 
 아래 커맨드는 `python -m ...` 대신 사용할 수 있습니다.
