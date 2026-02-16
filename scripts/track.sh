@@ -6,6 +6,12 @@ BRANCH="${BRANCH:-main}"
 LOCAL_ONLY="${LOCAL_ONLY:-0}"
 WRITE_REPORT="${WRITE_REPORT:-1}"
 
+# Task 34: Snapshot 기본 ON (끄려면 SNAPSHOT=0)
+SNAPSHOT="${SNAPSHOT:-1}"
+SNAPSHOT_NAME="${SNAPSHOT_NAME:-BalanceOps-tracked}"
+SNAPSHOT_OUTDIR="${SNAPSHOT_OUTDIR:-.ci/snapshots}"
+SNAPSHOT_NO_UNTRACKED="${SNAPSHOT_NO_UNTRACKED:-0}"
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
@@ -47,6 +53,10 @@ emit "remote: $REMOTE"
 emit "branch: $BRANCH"
 emit "local_only: $LOCAL_ONLY"
 emit "write_report: $WRITE_REPORT"
+emit "snapshot: $SNAPSHOT"
+emit "snapshot_outdir: $SNAPSHOT_OUTDIR"
+emit "snapshot_name: $SNAPSHOT_NAME"
+emit "snapshot_no_untracked: $SNAPSHOT_NO_UNTRACKED"
 
 section "Local status"
 run_git "git status -sb" status -sb
@@ -66,22 +76,4 @@ else
     emit "fetch ok: $REMOTE"
     upstream="${REMOTE}/${BRANCH}"
 
-    if git rev-parse --verify "$upstream" >/dev/null 2>&1; then
-      section "Upstream diff"
-      run_git "ahead/behind (HEAD...$upstream)" rev-list --left-right --count "HEAD...${upstream}"
-      run_git "incoming commits (HEAD..$upstream)" log --oneline --decorate --max-count 30 "HEAD..${upstream}"
-      run_git "changed files (name-status)" diff --name-status "HEAD..${upstream}"
-      run_git "added files only (A)" diff --name-status --diff-filter=A "HEAD..${upstream}"
-    else
-      emit "upstream ref가 없습니다: $upstream"
-    fi
-  else
-    emit "원격 fetch 실패: $REMOTE"
-    emit "=> fallback: 로컬 변경/추가 파일 중심으로 추적합니다."
-  fi
-fi
-
-if [[ "$WRITE_REPORT" == "1" ]]; then
-  emit ""
-  emit "[track] report saved: $report"
-fi
+    if git rev-parse

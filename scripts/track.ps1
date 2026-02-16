@@ -2,13 +2,22 @@
   [string]$Remote = "origin",
   [string]$Branch = "main",
   [switch]$LocalOnly,
-  [switch]$NoReport
+  [switch]$NoReport,
+
+  # Task 34: Snapshot 기본 ON (끄려면 -NoSnapshot)
+  [switch]$NoSnapshot,
+  [string]$SnapshotName = "BalanceOps-tracked",
+  [string]$SnapshotOutDir = ".ci/snapshots",
+  [switch]$SnapshotNoUntracked
 )
 
 $ErrorActionPreference = "Stop"
 
 # 기본은 리포트 저장 ON, -NoReport면 OFF
 $WriteReport = -not $NoReport
+
+# 기본은 Snapshot ON, -NoSnapshot이면 OFF
+$DoSnapshot = -not $NoSnapshot
 
 # 콘솔 출력 인코딩(한글 출력 안정화)
 try { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false) } catch {}
@@ -18,8 +27,6 @@ $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $RepoRoot
 
 function Run_Git([string[]]$GitArgs) {
-  # PowerShell이 stderr를 "에러"로 취급해도 스크립트가 멈추지 않도록,
-  # 이 함수 안에서만 ErrorActionPreference를 낮춥니다.
   $old = $ErrorActionPreference
   $ErrorActionPreference = "Continue"
 
@@ -37,7 +44,6 @@ function Run_Git([string[]]$GitArgs) {
 }
 
 function Iso_Time {
-  # 예: 2026-02-09T18:12:34+09:00
   (Get-Date).ToString("yyyy-MM-ddTHH:mm:ssK")
 }
 
@@ -76,6 +82,12 @@ Emit ("branch: " + $Branch)
 Emit ("local_only: " + ($(if ($LocalOnly) { "1" } else { "0" })))
 Emit ("write_report: " + ($(if ($WriteReport) { "1" } else { "0" })))
 
+# Task 34: snapshot 기본 포함 정보 출력
+Emit ("snapshot: " + ($(if ($DoSnapshot) { "1" } else { "0" })))
+Emit ("snapshot_outdir: " + $SnapshotOutDir)
+Emit ("snapshot_name: " + $SnapshotName)
+Emit ("snapshot_no_untracked: " + ($(if ($SnapshotNoUntracked) { "1" } else { "0" })))
+
 # 항상 로컬 변경부터 표시 (track.sh parity)
 Write-Section "Local status"
 EmitCmd "git status -sb" @("status","-sb") | Out-Null
@@ -101,7 +113,6 @@ if ($LocalOnly) {
     Emit "fetch ok: $Remote"
     $upstream = "$Remote/$Branch"
 
-    # upstream 존재 확인
     $verify = Run_Git @("rev-parse","--verify",$upstream)
     if ($verify.Code -ne 0) {
       Emit "upstream ref가 없습니다: $upstream"
@@ -115,10 +126,39 @@ if ($LocalOnly) {
   }
 }
 
+# Task 34: Snapshot 기본 생성 (실패해도 track은 계속)
+if ($DoSnapshot) {
+  Write-Section "Snapshot (tracked zip)"
+  $snapScript = Join-Path $RepoRoot "scripts/snapshot_tracked.ps1"
+
+  if (-not (Test-Path $snapScript)) {
+    Emit "snapshot script not found: $snapScript"
+  } else {
+    try {
+      $snapArgs = @("-Name", $SnapshotName, "-OutDir", $SnapshotOutDir)
+      if ($SnapshotNoUntracked) { $snapArgs += "-NoUntracked" }
+
+      # snapshot 스크립트 자체 출력은 그대로 콘솔에 뜹니다.
+      & $snapScript @snapArgs
+
+      # 안정적으로 "latest" 경로만 report에도 남김
+      $outDirAbs = $SnapshotOutDir
+      if (-not [System.IO.Path]::IsPathRooted($outDirAbs)) {
+        $outDirAbs = Join-Path $RepoRoot $outDirAbs
+      }
+      $latest = Join-Path $outDirAbs ("{0}_latest.zip" -f $SnapshotName)
+
+      Emit ""
+      Emit ("[snapshot] latest: " + $latest)
+    } catch {
+      Emit ("snapshot 실패(무시하고 계속): " + $_.Exception.Message)
+    }
+  }
+}
+
 if ($WriteReport) {
   New-Item -ItemType Directory -Force (Split-Path -Parent $ReportPath) | Out-Null
 
-  # UTF-8 with BOM(한글 깨짐 방지). 필요 없으면 $true -> $false로 바꿔도 됨.
   [System.IO.File]::WriteAllLines(
     $ReportPath,
     $ReportLines.ToArray(),

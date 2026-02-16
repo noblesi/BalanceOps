@@ -61,14 +61,20 @@ python -m balanceops.tools.e2e
 
 ```powershell
 .\scripts\bootstrap.ps1
+```
 
 수동 설치 예시:
 
-# runtime만 (API/대시보드 실행용)
+**runtime만 (API/대시보드 실행용)**
+
+```powershell
 python -m pip install -r requirements.txt
 python -m pip install .
+```
 
-# dev 포함 (테스트/포맷/로컬 CI 체크)
+**dev 포함 (테스트/포맷/로컬 CI 체크)**
+
+```powershell
 python -m pip install -r requirements-dev.txt
 # 또는 (editable + dev extras)
 python -m pip install -e ".[dev]"
@@ -123,7 +129,6 @@ Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/predict" -ContentType
 
 # version
 Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8000/version"
-
 ```
 
 ---
@@ -165,7 +170,6 @@ GitHub Actions에서는 보통 아래를 확인합니다.
 - 설치(Linux/macOS): `./scripts/setup_hooks.sh`
 - 스킵: `git push --no-verify` 또는 `BALANCEOPS_SKIP_PRE_PUSH=1 git push`
 
-
 ### 원샷 점검 스크립트 (추천)
 
 로컬에서 CI와 동일한 점검을 한 번에 실행합니다. (기본은 `.ci/` sandbox 사용)
@@ -196,10 +200,14 @@ E2E까지 포함하려면:
 
 - 리포트 경로: `.ci/track/track_YYYYMMDD_HHMMSS.md`
 
+> `track` 실행 시 기본으로 **추적용 ZIP 스냅샷(.ci/snapshots/…_latest.zip)** 도 함께 생성합니다.  
+> - 끄기: Windows는 `.\scripts\track.ps1 -NoSnapshot`, bash는 `SNAPSHOT=0 ./scripts/track.sh`  
+> - untracked 제외: Windows는 `-SnapshotNoUntracked`, bash는 `SNAPSHOT_NO_UNTRACKED=1`
+
 ### Windows (PowerShell)
 
 ```powershell
-# 기본: origin/main 기준 추적 + 리포트 저장
+# 기본: origin/main 기준 추적 + 리포트 저장 (+ 기본 Snapshot 생성)
 .\scripts\track.ps1
 
 # 원격 fetch 생략(로컬만)
@@ -210,12 +218,18 @@ E2E까지 포함하려면:
 
 # 리포트 저장 끄기
 .\scripts\track.ps1 -NoReport
+
+# (Task 34) Snapshot 끄기
+.\scripts\track.ps1 -NoSnapshot
+
+# (Task 34) Snapshot에 untracked 제외
+.\scripts\track.ps1 -SnapshotNoUntracked
 ```
 
 ### Linux/macOS / Git Bash (bash)
 
 ```bash
-# 기본: origin/main 기준 추적 + 리포트 저장
+# 기본: origin/main 기준 추적 + 리포트 저장 (+ 기본 Snapshot 생성)
 ./scripts/track.sh
 
 # 원격 fetch 생략(로컬만)
@@ -226,11 +240,16 @@ REMOTE=origin BRANCH=main ./scripts/track.sh
 
 # 리포트 저장 끄기
 WRITE_REPORT=0 ./scripts/track.sh
+
+# (Task 34) Snapshot 끄기
+SNAPSHOT=0 ./scripts/track.sh
+
+# (Task 34) Snapshot에 untracked 제외
+SNAPSHOT_NO_UNTRACKED=1 ./scripts/track.sh
 ```
 
 > 원격 fetch가 실패(오프라인/권한/remote 미설정 등)해도 스크립트는 종료하지 않고,
 > 로컬 변경사항 및 추가된 파일을 중심으로 계속 출력합니다.
-
 
 ### 로컬에서 CI와 동일하게 한 번에 점검하기
 
@@ -245,7 +264,6 @@ WRITE_REPORT=0 ./scripts/track.sh
 
 > 기본은 `.ci/` sandbox(DB/Artifacts/Current)로 실행합니다.
 > 로컬 기본 경로(`data/`, `artifacts/`)를 쓰려면: `python -m balanceops.tools.ci_check --no-ci-env`
-
 
 ---
 
@@ -321,6 +339,7 @@ $env:BALANCEOPS_DB = "data/balanceops.db"
 $env:BALANCEOPS_ARTIFACTS = "artifacts"
 $env:BALANCEOPS_CURRENT_MODEL = "artifacts/models/current.joblib"
 ```
+
 ---
 
 ## Troubleshooting
@@ -418,7 +437,6 @@ docker compose up --build
 ```
 - API: http://localhost:8000/health
 - Dashboard: http://localhost:18501
-
 
 ## Tabular Baseline (CSV)
 
@@ -528,6 +546,7 @@ type .\artifacts\runs\_latest.json
 
 > 포트(8501/18501 등)는 환경/스크립트에 따라 다를 수 있으니, **dashboard.ps1 실행 시 출력되는 URL**을 기준으로 안내합니다.
 
+---
 
 ## 추적용 ZIP 스냅샷 (tracked + 선택: untracked)
 
@@ -545,17 +564,18 @@ ChatGPT/리뷰용으로 레포를 “통째로” 압축하지 않고, **현재 
 .\scripts\snapshot_tracked.ps1 -NoUntracked
 ```
 
-```md
 ### Linux/macOS / Git Bash (bash)
 
 ```bash
 ./scripts/snapshot_tracked.sh
 NO_UNTRACKED=1 ./scripts/snapshot_tracked.sh
 ```
----
 
 ## 로컬에서 실행/검증
+
 PowerShell에서:
 
+```powershell
 .\scripts\snapshot_tracked.ps1
 ls .\.ci\snapshots
+```
