@@ -4,11 +4,14 @@
   [switch]$LocalOnly,
   [switch]$NoReport,
 
-  # Task 34: Snapshot 기본 ON (끄려면 -NoSnapshot)
+  # Snapshot 기본 ON (끄려면 -NoSnapshot)
   [switch]$NoSnapshot,
   [string]$SnapshotName = "BalanceOps-tracked",
   [string]$SnapshotOutDir = ".ci/snapshots",
-  [switch]$SnapshotNoUntracked
+  [switch]$SnapshotNoUntracked,
+
+  # latest report 포인터 기본 ON (끄려면 -NoLatestReport)
+  [switch]$NoLatestReport
 )
 
 $ErrorActionPreference = "Stop"
@@ -18,6 +21,9 @@ $WriteReport = -not $NoReport
 
 # 기본은 Snapshot ON, -NoSnapshot이면 OFF
 $DoSnapshot = -not $NoSnapshot
+
+# latest report 기본 ON, -NoLatestReport면 OFF
+$DoLatestReport = $WriteReport -and (-not $NoLatestReport)
 
 # 콘솔 출력 인코딩(한글 출력 안정화)
 try { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false) } catch {}
@@ -48,7 +54,10 @@ function Iso_Time {
 }
 
 $ts = Get-Date -Format "yyyyMMdd_HHmmss"
-$ReportPath = Join-Path $RepoRoot ".ci/track/track_$ts.md"
+$TrackDir = Join-Path $RepoRoot ".ci/track"
+$ReportPath = Join-Path $TrackDir "track_$ts.md"
+$LatestReportPath = Join-Path $TrackDir "track_latest.md"
+
 $ReportLines = New-Object System.Collections.Generic.List[string]
 
 function Emit([string]$line) {
@@ -82,7 +91,13 @@ Emit ("branch: " + $Branch)
 Emit ("local_only: " + ($(if ($LocalOnly) { "1" } else { "0" })))
 Emit ("write_report: " + ($(if ($WriteReport) { "1" } else { "0" })))
 
-# Task 34: snapshot 기본 포함 정보 출력
+# latest report 정보 출력
+Emit ("latest_report: " + ($(if ($DoLatestReport) { "1" } else { "0" })))
+if ($DoLatestReport) {
+  Emit ("latest_report_path: " + $LatestReportPath)
+}
+
+# snapshot 기본 포함 정보 출력
 Emit ("snapshot: " + ($(if ($DoSnapshot) { "1" } else { "0" })))
 Emit ("snapshot_outdir: " + $SnapshotOutDir)
 Emit ("snapshot_name: " + $SnapshotName)
@@ -126,7 +141,7 @@ if ($LocalOnly) {
   }
 }
 
-# Task 34: Snapshot 기본 생성 (실패해도 track은 계속)
+# Snapshot 기본 생성 (실패해도 track은 계속)
 if ($DoSnapshot) {
   Write-Section "Snapshot (tracked zip)"
   $snapScript = Join-Path $RepoRoot "scripts/snapshot_tracked.ps1"
@@ -138,10 +153,8 @@ if ($DoSnapshot) {
       $snapArgs = @("-Name", $SnapshotName, "-OutDir", $SnapshotOutDir)
       if ($SnapshotNoUntracked) { $snapArgs += "-NoUntracked" }
 
-      # snapshot 스크립트 자체 출력은 그대로 콘솔에 뜹니다.
       & $snapScript @snapArgs
 
-      # 안정적으로 "latest" 경로만 report에도 남김
       $outDirAbs = $SnapshotOutDir
       if (-not [System.IO.Path]::IsPathRooted($outDirAbs)) {
         $outDirAbs = Join-Path $RepoRoot $outDirAbs
@@ -167,4 +180,10 @@ if ($WriteReport) {
 
   Write-Host ""
   Write-Host "[track] report saved: $ReportPath"
+
+  # latest 포인터 갱신
+  if ($DoLatestReport) {
+    Copy-Item -Path $ReportPath -Destination $LatestReportPath -Force
+    Write-Host "[track] latest report: $LatestReportPath"
+  }
 }

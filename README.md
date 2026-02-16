@@ -201,6 +201,9 @@ E2E까지 포함하려면:
 - 리포트 경로: `.ci/track/track_YYYYMMDD_HHMMSS.md`
 
 > `track` 실행 시 기본으로 **추적용 ZIP 스냅샷(.ci/snapshots/…_latest.zip)** 도 함께 생성합니다.  
+> 또한 실행 시 `.ci/track/track_latest.md`가 **항상 최신 리포트를 가리키도록** 함께 갱신됩니다.  
+> - 끄기: Windows는 `.\scripts\track.ps1 -NoLatestReport`, bash는 `TRACK_NO_LATEST=1 ./scripts/track.sh`  
+  
 > - 끄기: Windows는 `.\scripts\track.ps1 -NoSnapshot`, bash는 `SNAPSHOT=0 ./scripts/track.sh`  
 > - untracked 제외: Windows는 `-SnapshotNoUntracked`, bash는 `SNAPSHOT_NO_UNTRACKED=1`
 
@@ -246,6 +249,9 @@ SNAPSHOT=0 ./scripts/track.sh
 
 # (Task 34) Snapshot에 untracked 제외
 SNAPSHOT_NO_UNTRACKED=1 ./scripts/track.sh
+
+# (Task 35) latest 리포트 포인터(track_latest.md) 끄기
+TRACK_NO_LATEST=1 ./scripts/track.sh
 ```
 
 > 원격 fetch가 실패(오프라인/권한/remote 미설정 등)해도 스크립트는 종료하지 않고,
