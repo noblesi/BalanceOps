@@ -535,6 +535,15 @@ type .\artifacts\runs\_latest.json
 
 ---
 
+```md
+---
+
+## Changelog / Releases
+
+- 변경 이력: `CHANGELOG.md`
+- 릴리스: `vX.Y.Z` 태그(예: `v0.1.0`)로 고정
+```
+
 ## License
 
 This project is licensed under the MIT License. See the `LICENSE` file for details.

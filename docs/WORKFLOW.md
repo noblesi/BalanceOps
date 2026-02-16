@@ -60,3 +60,25 @@ git commit
 
 ### 5) push
 git push
+
+---
+
+## 릴리스(Versioning & Tagging)
+
+### 1) 원칙
+- 변경 기록은 `CHANGELOG.md`에 남깁니다.
+- 릴리스 버전은 `vX.Y.Z` 태그로 고정합니다. (예: `v0.1.0`)
+- 태그는 **CI가 green**인 커밋에서만 찍습니다.
+
+### 2) 릴리스 체크리스트
+1. `CHANGELOG.md`의 `[Unreleased]`를 정리하고, 새 버전 섹션을 추가
+2. (선택) `pyproject.toml`의 `version`을 릴리스 버전으로 갱신
+3. 로컬 점검:
+   - Windows: `.\scripts\check.ps1`
+   - Linux/macOS: `./scripts/check.sh`
+4. 태그 생성 + 푸시:
+   - `git tag -a v0.1.0 -m "BalanceOps v0.1.0"`
+   - `git push origin v0.1.0`
+
+### 3) GitHub Releases(선택)
+- 릴리스 노트는 `CHANGELOG.md`의 해당 버전 섹션을 그대로 사용합니다.
