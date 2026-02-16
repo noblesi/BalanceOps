@@ -18,13 +18,27 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $RepoRoot
 
-function GitOut([string[]]$args) {
-  $out = (& git @args 2>$null | Out-String).Trim()
-  if ($LASTEXITCODE -ne 0) {
-    throw "git failed: git $($args -join ' ')"
+function GitOut {
+  param(
+    [string[]]$GitArgs
+  )
+
+  if (-not $GitArgs -or $GitArgs.Count -eq 0) {
+    throw "git failed: no args provided"
   }
-  return $out
+
+  $out = (& git @GitArgs 2>&1 | Out-String).TrimEnd()
+  $code = $LASTEXITCODE
+
+  if ($code -ne 0) {
+    $msg = "git failed: git $($GitArgs -join ' ')"
+    if ($out) { $msg += "`n$out" }
+    throw $msg
+  }
+
+  return $out.Trim()
 }
+
 
 $ts = Get-Date -Format "yyyyMMdd_HHmmss"
 $sha = (GitOut @("rev-parse","--short=7","HEAD")).Trim()
