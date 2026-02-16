@@ -61,19 +61,14 @@ python -m balanceops.tools.e2e
 
 ```powershell
 .\scripts\bootstrap.ps1
-```
 
-```md
 수동 설치 예시:
 
 # runtime만 (API/대시보드 실행용)
-```powershell
 python -m pip install -r requirements.txt
 python -m pip install .
-```
 
 # dev 포함 (테스트/포맷/로컬 CI 체크)
-```powershell
 python -m pip install -r requirements-dev.txt
 # 또는 (editable + dev extras)
 python -m pip install -e ".[dev]"
@@ -214,7 +209,7 @@ E2E까지 포함하려면:
 .\scripts\track.ps1 -Remote origin -Branch main
 
 # 리포트 저장 끄기
-.\scripts\track.ps1 -WriteReport:$false
+.\scripts\track.ps1 -NoReport
 ```
 
 ### Linux/macOS / Git Bash (bash)
@@ -532,3 +527,35 @@ type .\artifacts\runs\_latest.json
 - `/version` 실패 메시지가 뜨면 먼저 API 터미널 로그를 확인
 
 > 포트(8501/18501 등)는 환경/스크립트에 따라 다를 수 있으니, **dashboard.ps1 실행 시 출력되는 URL**을 기준으로 안내합니다.
+
+
+## 추적용 ZIP 스냅샷 (tracked + 선택: untracked)
+
+ChatGPT/리뷰용으로 레포를 “통째로” 압축하지 않고, **현재 워킹트리의 tracked 파일**(선택으로 untracked도)만 묶어 ZIP을 만듭니다.
+
+- 출력 폴더: `.ci/snapshots/` (gitignore로 추적 제외)
+- 출력 파일:
+  - 타임스탬프 포함: `BalanceOps-tracked_YYYYMMDD_HHMMSS_<sha7>.zip`
+  - 최신본: `BalanceOps-tracked_latest.zip`
+
+### Windows (PowerShell)
+
+```powershell
+.\scripts\snapshot_tracked.ps1
+.\scripts\snapshot_tracked.ps1 -NoUntracked
+```
+
+```md
+### Linux/macOS / Git Bash (bash)
+
+```bash
+./scripts/snapshot_tracked.sh
+NO_UNTRACKED=1 ./scripts/snapshot_tracked.sh
+```
+---
+
+## 로컬에서 실행/검증
+PowerShell에서:
+
+.\scripts\snapshot_tracked.ps1
+ls .\.ci\snapshots
