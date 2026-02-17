@@ -542,6 +542,8 @@ type .\artifacts\runs\_latest.json
 
 - 변경 이력: `CHANGELOG.md`
 - 릴리스: `vX.Y.Z` 태그(예: `v0.1.0`)로 고정
+- 릴리스 전 점검(권장): `.\scripts\release_check.ps1 -Tag vX.Y.Z` (또는 `./scripts/release_check.sh vX.Y.Z`)
+
 ```
 
 ## License
