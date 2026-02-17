@@ -22,7 +22,7 @@ This format is based on **Keep a Changelog**, and this project aims to follow **
 
 ---
 
-## [0.1.0] - 2026-02-XX
+## 2026-02-17
 
 ### Added
 - 실험 추적(Tracking): run/metrics/artifacts를 SQLite + artifacts/에 기록
