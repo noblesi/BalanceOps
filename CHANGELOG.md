@@ -12,13 +12,10 @@ This format is based on **Keep a Changelog**, and this project aims to follow **
 ## [Unreleased]
 
 ### Added
-- (예) 새 기능/스크립트/문서
 
 ### Changed
-- (예) 동작 변경/개선
 
 ### Fixed
-- (예) 버그 수정
 
 ---
 
