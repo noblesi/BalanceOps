@@ -19,5 +19,6 @@ artifacts/
 .ruff_cache/
 .ci/
 
-BalanceOps-tracked*.zip
+# snapshot artifacts (local use only)
 BalanceOps-tracked/
+BalanceOps-tracked*.zip
